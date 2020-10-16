@@ -20,7 +20,7 @@ class _LoginState extends State<Login> {
         child: Column(
           children: [
             Container(
-              margin: EdgeInsets.only(top: 20, bottom: 90),
+              margin: EdgeInsets.only(top: 20, bottom: 120),
               child: Image.asset('Assets/images/cosemarLogo.png'),
             ),
             Container(
