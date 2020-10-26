@@ -1,3 +1,4 @@
+import 'package:Cosemar/Widgets/Dashboard.dart';
 import 'package:flutter/material.dart';
 import './Widgets/LoginWidget.dart';
 
@@ -10,7 +11,7 @@ class Main extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Cosemar',
-      home: Login(),
+      home: Dashboard(),
       theme: ThemeData(primarySwatch: Colors.green),
     );
   }
