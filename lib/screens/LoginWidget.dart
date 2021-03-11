@@ -108,6 +108,9 @@ class _LoginState extends State<Login> {
     }
   }
 
+  final debugController =
+      TextEditingController(text: NetworkProvider.getServerIp);
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
@@ -129,6 +132,14 @@ class _LoginState extends State<Login> {
               ),
               SizedBox(
                 height: mediaQuery.size.height * 0.05,
+              ),
+              TextField(
+                decoration: InputDecoration(labelText: "DEBUG: SERVER IP"),
+                onSubmitted: (value) {
+                  NetworkProvider.serverIp = value;
+                  print("Server IP is now ${NetworkProvider.getServerIp}");
+                },
+                controller: debugController,
               ),
               Container(
                 margin: EdgeInsets.all(10),

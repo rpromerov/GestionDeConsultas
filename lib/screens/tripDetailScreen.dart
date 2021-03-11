@@ -1,3 +1,4 @@
+import 'package:Cosemar/Widgets/DetailButton.dart';
 import 'package:Cosemar/Widgets/loadingIndicator.dart';
 import 'package:Cosemar/model/trip.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
@@ -5,6 +6,7 @@ import 'package:Cosemar/providers/networkProvider.dart';
 import 'package:Cosemar/screens/CancelTripScreen.dart';
 import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:Cosemar/screens/ReceptionScreen.dart';
+import 'package:Cosemar/screens/receptionScreenGateway.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -76,7 +78,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       ],
       title: Text("Viaje Iniciado correctamente"),
     );
-    showDialog(child: alert, context: context);
+    showDialog(builder: (ctx) => alert, context: context);
   }
 
   var globalKey = GlobalKey<ScaffoldState>();
@@ -135,7 +137,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               networkManager.checkReception().then((isAvaible) {
                 print(isAvaible);
                 isAvaible
-                    ? Navigator.of(context).pushNamed(ReceptionScreen.routeName)
+                    ? Navigator.of(context)
+                        .pushNamed(ReceptionScreenGateway.routeName)
                     : globalKey.currentState.showSnackBar(SnackBar(
                         content: Text(
                           networkManager.currentTrip.tripID != null
@@ -170,12 +173,77 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
+  List<DetailButton> detailButtons(TripStates tripState, BuildContext ctx) {
+    final network = Provider.of<NetworkProvider>(ctx);
+    final obra = network.currentObra;
+    final navButton = DetailButton(
+      color: Colors.blueAccent,
+      text: 'Navegar',
+      icon: Icons.navigation,
+      function: () {
+        try {
+          launchWaze("${obra.direccion},${obra.comuna}");
+        } catch (error) {
+          launchGoogleMaps("${obra.direccion},${obra.comuna}");
+        }
+      },
+    );
+    final cancelButton = DetailButton(
+      color: Colors.redAccent,
+      text: 'Cancelar Viaje',
+      icon: Icons.cancel,
+      function: () {
+        Navigator.of(context).pushNamed(CancelTripScreen.routeName);
+      },
+    );
+    final finishButton = DetailButton(
+      color: Colors.green,
+      text: 'Finalizar Viaje',
+      icon: Icons.check,
+      function: () {
+        showDialog(
+          context: ctx,
+          builder: (ctx) {
+            return AlertDialog(
+              actions: [
+                TextButton(
+                  child: Text("Cancelar"),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+                TextButton(
+                  child: Text("Finalizar Viaje"),
+                  onPressed: () {
+                    network.finishTrip().then((onValue) {});
+                  },
+                )
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    switch (tripState) {
+      case TripStates.onRoute:
+        return [navButton];
+        break;
+      case TripStates.toDepot:
+        return [navButton, finishButton];
+      case TripStates.onClient:
+        return [cancelButton];
+
+      default:
+        return [];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final networkManager = Provider.of<NetworkProvider>(context);
     final Trip trip = ModalRoute.of(context).settings.arguments;
     final obra = networkManager.fetchObraByID(trip.obraID);
     final mediaQuery = MediaQuery.of(context);
+    final detailButtonsList = detailButtons(trip.stateEnum, context);
     var tripDataCard = Card(
       elevation: 3,
       child: Column(
@@ -313,44 +381,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         ],
                       )),
                 ),
-                SizedBox(
-                  height: 15,
-                ),
-                DetailButton(
-                  color: Colors.blueAccent,
-                  text: 'Navegar',
-                  icon: Icons.navigation,
-                  function: () {
-                    try {
-                      launchWaze("${obra.direccion},${obra.comuna}");
-                    } catch (error) {
-                      launchGoogleMaps("${obra.direccion},${obra.comuna}");
-                    }
-                  },
-                ),
-                SizedBox(
-                  height: 15,
-                ),
-                DetailButton(
-                  color: Colors.redAccent,
-                  text: 'Cancelar Viaje',
-                  icon: Icons.cancel,
-                  function: () {
-                    if (networkManager.currentTrip.tripID == trip.tripID) {
-                      Navigator.of(context)
-                          .pushNamed(CancelTripScreen.routeName);
-                    } else {
-                      globalKey.currentState.showSnackBar(SnackBar(
-                        content: Text(
-                          "Solo los viajes actuales pueden ser cancelados",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                      ));
-                    }
-                  },
-                ),
-                SizedBox(
-                  height: 15,
+                ListView(
+                  children: [...detailButtonsList],
                 )
               ],
             ),
@@ -360,44 +392,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       //Loading indicator
       isLoading ? LoadingIndicator() : Container()
     ]);
-  }
-}
-
-class DetailButton extends StatelessWidget {
-  final Color color;
-  final String text;
-  final IconData icon;
-  final Function function;
-
-  const DetailButton({Key key, this.color, this.text, this.icon, this.function})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    return RaisedButton(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: color,
-      onPressed: function,
-      child: Container(
-        padding: EdgeInsets.all(10),
-        width: mediaQuery.size.width * 0.8,
-        height: mediaQuery.size.height * 0.1,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              text,
-              style: Theme.of(context)
-                  .textTheme
-                  .button
-                  .copyWith(fontSize: 25, color: Colors.white),
-            ),
-            Icon(icon, size: 25, color: Colors.white),
-          ],
-        ),
-      ),
-    );
   }
 }
 

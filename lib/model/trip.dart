@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 class Trip {
   String tripID;
+  String depotId;
   DateTime programmedArrivalTime;
   DateTime arrivalTime;
   DateTime programmedReturnTime;
@@ -52,5 +53,6 @@ class Trip {
       this.obraID,
       this.obra,
       this.tripState,
-      this.programmedDepartureTime});
+      this.programmedDepartureTime,
+      this.depotId});
 }

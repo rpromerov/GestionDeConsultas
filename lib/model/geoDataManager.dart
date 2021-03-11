@@ -10,7 +10,7 @@ class GeoDataManager {
   /// are denied the `Future` will return an error.
   ///
   Future<bool> isReceptionAvaible(double latitud, double longitud) async {
-    if (await getDistance(latitud, longitud) <= 500) {
+    if (await getDistance(latitud, longitud) <= 750) {
       return true;
     } else {
       return false;
@@ -60,9 +60,10 @@ class GeoDataManager {
       return double.infinity;
     }
     final currentPosition = await _determinePosition();
-    print(latitud);
+
     final currentDistance = Geolocator.distanceBetween(
         currentPosition.latitude, currentPosition.longitude, latitud, longitud);
-    return 400;
+    print("$latitud,$longitud");
+    return currentDistance;
   }
 }

@@ -7,6 +7,7 @@ import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:Cosemar/screens/ReceptionScreen.dart';
 import 'package:Cosemar/screens/TripsScreen.dart';
 import 'package:Cosemar/screens/notificationScreen.dart';
+import 'package:Cosemar/screens/receptionScreenGateway.dart';
 import 'package:Cosemar/screens/tripDetailScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -45,14 +46,15 @@ class _DashboardState extends State<Dashboard> {
               .take(3)
               .toList();
         }
-      });
-      if (testNetworkManager.currentTrip.tripID != null) {
-        testNetworkManager.checkReception().then((_) {
-          setState(() {
-            isReceptionAvaible = testNetworkManager.isReceptionAvaible;
+
+        if (testNetworkManager.currentTrip.tripID != null) {
+          testNetworkManager.checkReception().then((isAvaible) {
+            setState(() {
+              isReceptionAvaible = isAvaible;
+            });
           });
-        });
-      }
+        }
+      });
     }
   }
 
@@ -128,47 +130,95 @@ class _DashboardState extends State<Dashboard> {
               ])),
     );
 
-    var receptionButton = RaisedButton(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: isReceptionAvaible
-          ? Theme.of(context).accentColor
-          : Theme.of(context).disabledColor,
-      onPressed: () {
-        geoDataManager
-            .isReceptionAvaible(testNetworkManager.currentObra.latitud,
-                testNetworkManager.currentObra.longitud)
-            .then((isAvaible) {
-          setState(() {
-            isReceptionAvaible = isAvaible;
-          });
-          isAvaible
-              ? Navigator.of(context).pushNamed(ReceptionScreen.routeName)
-              : globalKey.currentState.showSnackBar(SnackBar(
-                  content: Text(
-                    testNetworkManager.currentTrip.tripID != null
-                        ? "Recepcion no disponible, distancia con el cliente es muy grande"
-                        : "Recepcion no disponible, debe haber iniciado un viaje",
-                    style: TextStyle(fontSize: 20),
+    var receptionButton = testNetworkManager.currentTrip.stateEnum ==
+            TripStates.toDepot
+        ? RaisedButton(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            color: isReceptionAvaible
+                ? Theme.of(context).accentColor
+                : Theme.of(context).disabledColor,
+            onPressed: () {
+              geoDataManager
+                  .isReceptionAvaible(
+                      testNetworkManager.currentDepot.coordinates['lat'],
+                      testNetworkManager.currentDepot.coordinates['lon'])
+                  .then((isAvaible) {
+                setState(() {
+                  isReceptionAvaible = isAvaible;
+                });
+                isAvaible
+                    ? Navigator.of(context)
+                        .pushNamed(ReceptionScreenGateway.routeName)
+                    : globalKey.currentState.showSnackBar(SnackBar(
+                        content: Text(
+                          testNetworkManager.currentTrip.tripID != null
+                              ? "Recepcion no disponible, distancia con la bodega es muy grande"
+                              : "Recepcion no disponible, debe haber iniciado un viaje",
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ));
+              });
+            },
+            child: Container(
+              padding: EdgeInsets.all(10),
+              height: mediaQuery.size.height * 0.1,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Realizar recepción',
+                    style: textStyle.button
+                        .copyWith(fontSize: 20, color: Colors.white),
                   ),
-                ));
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.all(10),
-        height: mediaQuery.size.height * 0.1,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Realizar recepción',
-              style:
-                  textStyle.button.copyWith(fontSize: 20, color: Colors.white),
+                  Icon(Icons.arrow_forward, size: 25, color: Colors.white),
+                ],
+              ),
             ),
-            Icon(Icons.arrow_forward, size: 25, color: Colors.white),
-          ],
-        ),
-      ),
-    );
+          )
+        : RaisedButton(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            color: isReceptionAvaible
+                ? Theme.of(context).accentColor
+                : Theme.of(context).disabledColor,
+            onPressed: () {
+              geoDataManager
+                  .isReceptionAvaible(testNetworkManager.currentObra.latitud,
+                      testNetworkManager.currentObra.longitud)
+                  .then((isAvaible) {
+                setState(() {
+                  isReceptionAvaible = isAvaible;
+                });
+                isAvaible
+                    ? Navigator.of(context)
+                        .pushNamed(ReceptionScreenGateway.routeName)
+                    : globalKey.currentState.showSnackBar(SnackBar(
+                        content: Text(
+                          testNetworkManager.currentTrip.tripID != null
+                              ? "Recepcion no disponible, distancia con el cliente es muy grande"
+                              : "Recepcion no disponible, debe haber iniciado un viaje",
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ));
+              });
+            },
+            child: Container(
+              padding: EdgeInsets.all(10),
+              height: mediaQuery.size.height * 0.1,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Realizar recepción',
+                    style: textStyle.button
+                        .copyWith(fontSize: 20, color: Colors.white),
+                  ),
+                  Icon(Icons.arrow_forward, size: 25, color: Colors.white),
+                ],
+              ),
+            ),
+          );
 
     void logoutConfirmation(BuildContext ctx) {
       final confirmationAlert = AlertDialog(
@@ -194,7 +244,7 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       );
-      showDialog(context: ctx, child: confirmationAlert);
+      showDialog(context: ctx, builder: (ctx) => confirmationAlert);
     }
 
     return Scaffold(

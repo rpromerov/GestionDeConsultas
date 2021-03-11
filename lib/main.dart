@@ -1,16 +1,21 @@
+import 'dart:io';
+
 import 'package:Cosemar/providers/networkProvider.dart';
 import 'package:Cosemar/screens/CancelTripScreen.dart';
 import 'package:Cosemar/screens/Dashboard.dart';
+import 'package:Cosemar/screens/LandfillReceptionScreen.dart';
 import 'package:Cosemar/screens/NotificationScreen.dart';
 import 'package:Cosemar/screens/ReceptionScreen.dart';
 import 'package:Cosemar/screens/TripsScreen.dart';
+import 'package:Cosemar/screens/receptionScreenGateway.dart';
 import 'package:Cosemar/screens/tripDetailScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/LoginWidget.dart';
 
 void main() {
-  runApp(Main());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(new Main());
 }
 
 class Main extends StatelessWidget {
@@ -29,7 +34,8 @@ class Main extends StatelessWidget {
           TripDetailScreen.routeName: (ctx) => TripDetailScreen(),
           ReceptionScreen.routeName: (ctx) => ReceptionScreen(),
           Login.routeName: (ctx) => Login(),
-          CancelTripScreen.routeName: (ctx) => CancelTripScreen()
+          CancelTripScreen.routeName: (ctx) => CancelTripScreen(),
+          ReceptionScreenGateway.routeName: (ctx) => ReceptionScreenGateway()
         },
       ),
     );

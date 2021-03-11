@@ -1,3 +1,4 @@
+import 'package:Cosemar/Widgets/DetailButton.dart';
 import 'package:Cosemar/providers/networkProvider.dart';
 import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:Cosemar/screens/tripDetailScreen.dart';
@@ -33,7 +34,7 @@ class _CancelTripScreenState extends State<CancelTripScreen> {
         )
       ],
     );
-    showDialog(context: ctx, child: alert);
+    showDialog(context: ctx, builder: (ctx) => alert);
   }
 
   final commentaryField = TextEditingController();

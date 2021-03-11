@@ -50,7 +50,7 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
           width: mediaQuery.size.width * 0.9,
           height: mediaQuery.size.height * 0.6,
           child: SignatureWidget(
-            signatureBoardOffset: 20,
+            signatureBoardOffsetX: 20,
           )),
       Container(
         width: mediaQuery.size.width * 0.9,

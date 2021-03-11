@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:Cosemar/model/depot.dart';
 import 'package:Cosemar/model/geoDataManager.dart';
 import 'package:Cosemar/model/http_exception.dart';
 import 'package:Cosemar/model/obra.dart';
@@ -16,7 +17,11 @@ import 'package:intl/intl.dart';
 enum ConnectionStatus { connecting, disconnected, connected }
 
 class NetworkProvider with ChangeNotifier {
-  static const serverIp = "http://192.168.0.29:5000";
+  static String serverIp = "http://192.168.0.48:5000";
+  static String get getServerIp {
+    return serverIp;
+  }
+
   String _token = null;
   String _userName = null;
   String _userEmail = null;
@@ -28,9 +33,11 @@ class NetworkProvider with ChangeNotifier {
 
   List<Trip> trips = [];
   var obras = Map<String, Obra>();
+  var depots = Map<String, Depot>();
 
   var currentTrip = Trip();
   var currentObra = Obra();
+  var currentDepot = Depot();
 
   void testChangeTripState() {
     testDidFinishTrip = true;
@@ -64,7 +71,7 @@ class NetworkProvider with ChangeNotifier {
   }
 
   Future<void> changeState(String tripID, TripStates state) async {
-    final requestURL = "$serverIp/api/Viaje/$tripID";
+    final requestURL = "$getServerIp/api/Viaje/$tripID";
     encodeTime();
     final encodedState =
         jsonEncode({'IdEstadoViaje': state.asInt, 'inicio': encodeTime()});
@@ -79,7 +86,6 @@ class NetworkProvider with ChangeNotifier {
 
   Future<void> cancelTrip(String tripID) async {
     final requestURL = "$serverIp/api/Viaje/$tripID";
-    encodeTime();
     final encodedState =
         jsonEncode({'IdEstadoViaje': 99, 'llegadaBodega': encodeTime()});
     final response = await http.put(requestURL,
@@ -96,7 +102,6 @@ class NetworkProvider with ChangeNotifier {
   }
 
   Future<void> startTrip(String tripID) async {
-    //TODO: notify server
     final trip = trips.firstWhere((trip) => tripID == trip.tripID);
     print("Starting trip...");
     try {
@@ -108,6 +113,109 @@ class NetworkProvider with ChangeNotifier {
       throw HttpException("Error actualizando");
     }
 
+    notifyListeners();
+  }
+
+  Future<void> finishTrip() async {
+    final requestURL = "$getServerIp/api/Viaje/${currentTrip.tripID}";
+    encodeTime();
+    final encodedState = jsonEncode(
+        {'IdEstadoViaje': TripStates.finished, 'llegadaBodega': encodeTime()});
+    final response = await http.put(requestURL,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer $token"
+        },
+        body: encodedState);
+  }
+
+  Future<void> onClientReceptionSent() async {
+    currentTrip.tripState = TripStates.deposing.asInt;
+    final requestURL = "$serverIp/api/Viaje/${currentTrip.tripID}";
+    final encodedState = jsonEncode({
+      'IdEstadoViaje': TripStates.deposing.asInt,
+      'salidaCliente': encodeTime()
+    });
+    final response = await http.put(requestURL,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer $token"
+        },
+        body: encodedState);
+    currentTrip.tripState = TripStates.deposing.asInt;
+
+    notifyListeners();
+  }
+
+  Future<void> onLandfillReceptionSent() async {
+    currentTrip.tripState = TripStates.deposing.asInt;
+    final requestURL = "$serverIp/api/Viaje/${currentTrip.tripID}";
+    final encodedState = jsonEncode({
+      'IdEstadoViaje': TripStates.toDepot.asInt,
+      'salidaCliente': encodeTime()
+    });
+    final response = await http.put(requestURL,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer $token"
+        },
+        body: encodedState);
+    currentTrip.tripState = TripStates.toDepot.asInt;
+
+    notifyListeners();
+  }
+
+  Future<void> sendClientReception(
+      {String nombre,
+      String rut,
+      String observaciones,
+      String base64Firma}) async {
+    final requestURL = "$serverIp/api/Recepcion/";
+    final encodedState = jsonEncode({
+      'IdViaje': currentTrip.tripID,
+      'Recepcionado': "$nombre $rut",
+      'FechaRecepcion': encodeTime(),
+      'Observaciones': observaciones,
+      'Firma': base64Firma
+    });
+    final response = await http
+        .post(requestURL,
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              "Authorization": "Bearer $token"
+            },
+            body: encodedState)
+        .then((onValue) => onLandfillReceptionSent());
+    notifyListeners();
+  }
+
+  Future<void> sendLandfillReception(
+      {String base64Image,
+      String tons,
+      String name,
+      String observations}) async {
+    final requestURL = "$serverIp/api/Recepcion/";
+    final encodedState = jsonEncode({
+      'IdViaje': currentTrip.tripID,
+      'Recepcionado': "$name",
+      'FechaRecepcion': encodeTime(),
+      'Observaciones': observations,
+      'ValeRecepcion': base64Image,
+      'Toneladas': double.parse(tons)
+    });
+    final response = await http
+        .post(requestURL,
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              "Authorization": "Bearer $token"
+            },
+            body: encodedState)
+        .then((onValue) {});
     notifyListeners();
   }
 
@@ -171,10 +279,26 @@ class NetworkProvider with ChangeNotifier {
               programmedReturnTime: parseTime(trip['llegadaBaseProgramada']),
               programmedDepartureTime: parseTime(trip['salidaProgramada']),
               tripState: trip['idEstadoViaje'],
-              obraID: trip['idObra']),
+              obraID: trip['idObra'],
+              depotId: trip['idBodega']),
         );
         if (!obras.containsKey(trip['idObra'])) {
           obras[trip['idObra']] = await fetchObra(trip['idObra']);
+        }
+
+        if (!depots.containsKey(trip['idBodega'])) {
+          final bodega = trip['bodega'];
+          bodega[trip['bodega']] = Depot(
+              depotId: bodega['idBodega'],
+              name: bodega['nombre'],
+              adress: bodega['direccion'],
+              comuna: bodega['comuna'],
+              coordinates: {
+                'lat': bodega['latitud'],
+                'lon': bodega['longuitud']
+              },
+              encargado: bodega['encargado'],
+              telephone: bodega['telefono']);
         }
       }
     } catch (error) {
@@ -187,9 +311,9 @@ class NetworkProvider with ChangeNotifier {
           trip.stateEnum != TripStates.pending) {
         currentTrip = trip;
         currentObra = obras[trip.obraID];
+        currentDepot = depots[trip.depotId];
       }
     }
-    print(trips.first.tripState);
     notifyListeners();
   }
 
@@ -242,7 +366,7 @@ class NetworkProvider with ChangeNotifier {
       return true;
     } else
       try {
-        final loginUrl = '$serverIp/api/Usuario/Login';
+        final loginUrl = '$getServerIp/api/Usuario/Login';
         connectionStatus = ConnectionStatus.connecting;
         notifyListeners();
         final codedUserData =
