@@ -19,6 +19,8 @@ class TripItem extends StatelessWidget {
       return Colors.red;
     } else if (notificationState == TripStates.pending) {
       return Colors.yellow;
+    } else if (notificationState == TripStates.finished) {
+      return Colors.grey;
     } else {
       return Colors.green;
     }

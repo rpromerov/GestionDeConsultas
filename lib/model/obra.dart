@@ -7,12 +7,13 @@ class Obra {
   String nombreEncargado;
   String telefono;
 
-  Obra(
-      {this.nombre,
-      this.comuna,
-      this.direccion,
-      this.latitud,
-      this.longitud,
-      this.nombreEncargado,
-      this.telefono});
+  Obra({
+    this.nombre,
+    this.comuna,
+    this.direccion,
+    this.latitud,
+    this.longitud,
+    this.nombreEncargado,
+    this.telefono,
+  });
 }

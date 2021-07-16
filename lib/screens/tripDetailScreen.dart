@@ -1,5 +1,6 @@
 import 'package:Cosemar/Widgets/DetailButton.dart';
 import 'package:Cosemar/Widgets/loadingIndicator.dart';
+import 'package:Cosemar/model/equipment.dart';
 import 'package:Cosemar/model/trip.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
 import 'package:Cosemar/providers/networkProvider.dart';
@@ -10,6 +11,7 @@ import 'package:Cosemar/screens/receptionScreenGateway.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:searchable_dropdown/searchable_dropdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -21,7 +23,6 @@ class TripDetailScreen extends StatefulWidget {
 }
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
-  var isLoading = false;
   void launchWaze(String address) async {
     var url = 'waze://?ll=$address,chile';
     var fallbackUrl = 'https://waze.com/ul?ll=$address,chile&navigate=yes';
@@ -83,96 +84,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   var globalKey = GlobalKey<ScaffoldState>();
 
-  Widget navBarButton(
-      TripStates tripState, String tripID, BuildContext context) {
-    final networkManager = Provider.of<NetworkProvider>(context);
-
-    switch (tripState) {
-      case TripStates.pending:
-        return FlatButton(
-          onPressed: () {
-            print("iniciando viaje...");
-            setState(() {
-              isLoading = true;
-            });
-
-            if (networkManager.currentTrip.tripID == null) {
-              networkManager.startTrip(tripID).whenComplete(() {
-                showAlertDialog(
-                  "Viaje iniciado correctamente",
-                  context,
-                );
-                setState(() {
-                  isLoading = false;
-                });
-              });
-            }
-            setState(() {
-              isLoading = false;
-            });
-          },
-          child: Row(
-            children: [
-              Text(
-                'Iniciar',
-                style: TextStyle(color: Colors.white),
-              ),
-              Icon(
-                Icons.arrow_forward,
-                color: Colors.white,
-              )
-            ],
-          ),
-        );
-        break;
-      default:
-        return FlatButton(
-          onPressed: () {
-            setState(() {
-              isLoading = true;
-            });
-
-            if (networkManager.currentTrip.tripID == tripID &&
-                networkManager.currentTrip != null) {
-              networkManager.checkReception().then((isAvaible) {
-                print(isAvaible);
-                isAvaible
-                    ? Navigator.of(context)
-                        .pushNamed(ReceptionScreenGateway.routeName)
-                    : globalKey.currentState.showSnackBar(SnackBar(
-                        content: Text(
-                          networkManager.currentTrip.tripID != null
-                              ? "Recepcion no disponible, distancia con el cliente es muy grande"
-                              : "Recepcion no disponible, debe haber iniciado un viaje",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                      ));
-
-                setState(() {
-                  isLoading = false;
-                });
-              });
-            } else {}
-            setState(() {
-              isLoading = false;
-            });
-          },
-          child: Row(
-            children: [
-              Text(
-                'Recepcion',
-                style: TextStyle(color: Colors.white),
-              ),
-              Icon(
-                Icons.arrow_forward,
-                color: Colors.white,
-              )
-            ],
-          ),
-        );
-    }
-  }
-
   List<DetailButton> detailButtons(TripStates tripState, BuildContext ctx) {
     final network = Provider.of<NetworkProvider>(ctx);
     final obra = network.currentObra;
@@ -205,6 +116,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           context: ctx,
           builder: (ctx) {
             return AlertDialog(
+              title: Text("Finalizar viaje"),
               actions: [
                 TextButton(
                   child: Text("Cancelar"),
@@ -213,7 +125,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 TextButton(
                   child: Text("Finalizar Viaje"),
                   onPressed: () {
-                    network.finishTrip().then((onValue) {});
+                    Navigator.of(context).pop();
+                    network.finishTrip().then((onValue) {
+                      Navigator.pushReplacementNamed(context, Login.routeName);
+                    });
                   },
                 )
               ],
@@ -229,12 +144,22 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         break;
       case TripStates.toDepot:
         return [navButton, finishButton];
+      case TripStates.onDepot:
+        return [navButton, finishButton];
       case TripStates.onClient:
         return [cancelButton];
 
       default:
         return [];
     }
+  }
+
+  var isLoading = false;
+
+  void toggleLoading(bool s) {
+    globalKey.currentState.setState(() {
+      isLoading = s;
+    });
   }
 
   @override
@@ -244,6 +169,89 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final obra = networkManager.fetchObraByID(trip.obraID);
     final mediaQuery = MediaQuery.of(context);
     final detailButtonsList = detailButtons(trip.stateEnum, context);
+    Widget navBarButton(
+      TripStates tripState,
+      String tripID,
+    ) {
+      switch (tripState) {
+        case TripStates.pending:
+          return FlatButton(
+            onPressed: () {
+              print("iniciando viaje...");
+              toggleLoading(true);
+
+              if (networkManager.currentTrip.tripID == null) {
+                networkManager.startTrip(tripID).whenComplete(() {
+                  showAlertDialog(
+                    "Viaje iniciado correctamente",
+                    context,
+                  );
+                  toggleLoading(false);
+                });
+              }
+              toggleLoading(false);
+            },
+            child: Row(
+              children: [
+                Text(
+                  'Iniciar',
+                  style: TextStyle(color: Colors.white),
+                ),
+                Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                )
+              ],
+            ),
+          );
+          break;
+        default:
+          return FlatButton(
+            onPressed: () {
+              setState(() {
+                this.isLoading = true;
+              });
+
+              if (networkManager.currentTrip.tripID == tripID &&
+                  networkManager.currentTrip != null) {
+                networkManager.checkReception().then((isAvaible) {
+                  isAvaible
+                      ? Navigator.of(context)
+                          .pushNamed(ReceptionScreenGateway.routeName)
+                      : globalKey.currentState.showSnackBar(SnackBar(
+                          content: Text(
+                            networkManager.currentTrip.tripID != null
+                                ? "Recepcion no disponible, distancia con el cliente es muy grande"
+                                : "Recepcion no disponible, debe haber iniciado un viaje",
+                            style: TextStyle(fontSize: 20),
+                          ),
+                        ));
+
+                  setState(() {
+                    this.isLoading = false;
+                  });
+                });
+              } else {}
+              setState(() {
+                this.isLoading = false;
+              });
+            },
+            child: Row(
+              children: [
+                Text(
+                  'Recepcion',
+                  style: TextStyle(color: Colors.white),
+                ),
+                Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                )
+              ],
+            ),
+          );
+      }
+    }
+
     var tripDataCard = Card(
       elevation: 3,
       child: Column(
@@ -264,7 +272,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [DetailText('Estado'), DetailText(stateText(trip))],
+            children: [
+              DetailText('Estado'),
+              DetailText(trip.stateEnum.asString)
+            ],
           ),
           Divider(
             thickness: 1.5,
@@ -289,17 +300,65 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         ],
       ),
     );
+    Equipment currentEquipment = networkManager.currentTrip.equipment;
+    var equipmentCard = Card(
+        child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        DetailText("Equipo"),
+        trip.stateEnum != TripStates.pending
+            ? DetailText(trip.avaibleEquipment.isEmpty
+                ? "Sin equipo"
+                : trip.equipment.name)
+            : SearchableDropdown(
+                hint: trip.avaibleEquipment == null
+                    ? "Sin equipo"
+                    : trip.equipment.name,
+                onChanged: (value) {
+                  setState(() {
+                    currentEquipment = value as Equipment;
+                    networkManager.currentTrip.equipmentID =
+                        currentEquipment.equipmentID;
+                    networkManager.currentTrip.equipment = currentEquipment;
+                  });
+                },
+                items: trip.avaibleEquipment.map((equipment) {
+                  return DropdownMenuItem(
+                    child: Text(
+                      trip.avaibleEquipment.isEmpty
+                          ? "Sin equipo"
+                          : "${equipment.name}",
+                      style: TextStyle(fontSize: 20),
+                    ),
+                    onTap: () {},
+                    value: equipment,
+                  );
+                }).toList(),
+              ),
+      ],
+    ));
     return Stack(children: [
       Scaffold(
         key: globalKey,
         appBar: AppBar(
           title: Text('Detalle del viaje'),
-          actions: [navBarButton(trip.stateEnum, trip.tripID, context)],
+          actions: [
+            if (trip.stateEnum == TripStates.onClient ||
+                trip.stateEnum == TripStates.toClient ||
+                trip.stateEnum == TripStates.onLandfill ||
+                trip.stateEnum == TripStates.deposing ||
+                trip.stateEnum == TripStates.pending)
+              navBarButton(trip.stateEnum, trip.tripID)
+          ],
         ),
         body: Stack(children: [
           SingleChildScrollView(
             child: Column(
               children: [
+                Container(
+                  margin: EdgeInsets.all(5),
+                  child: equipmentCard,
+                ),
                 Container(
                   margin: EdgeInsets.all(5),
                   child: tripDataCard,
@@ -348,8 +407,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                               DetailText('Teléfono'),
                               Spacer(),
                               FlatButton(
-                                onPressed: () =>
-                                    launch("tel://${obra.telefono}"),
+                                onPressed: () {
+                                  setState(() {
+                                    toggleLoading(!isLoading);
+                                  });
+                                  //launch("tel://${obra.telefono}");
+                                },
                                 child: Container(
                                   child: Text(
                                     obra.telefono,
@@ -381,8 +444,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         ],
                       )),
                 ),
-                ListView(
-                  children: [...detailButtonsList],
+                Container(
+                  height:
+                      mediaQuery.size.height * 0.2 * detailButtonsList.length,
+                  child: ListView(
+                    children: [...detailButtonsList],
+                  ),
                 )
               ],
             ),
@@ -390,7 +457,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         ]),
       ),
       //Loading indicator
-      isLoading ? LoadingIndicator() : Container()
+      if (isLoading) LoadingIndicator()
     ]);
   }
 }

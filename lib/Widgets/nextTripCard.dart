@@ -24,6 +24,8 @@ class NextTripCard extends StatelessWidget {
       return Colors.red;
     } else if (state == TripStates.pending) {
       return Colors.yellow;
+    } else if (state == TripStates.finished) {
+      return Colors.grey;
     } else {
       return Colors.green;
     }
@@ -55,9 +57,12 @@ class NextTripCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        destination,
-                        style: textStyle.headline5.copyWith(fontSize: 25),
+                      FittedBox(
+                        fit: BoxFit.contain,
+                        child: Text(
+                          destination,
+                          style: textStyle.headline5,
+                        ),
                       ),
                     ],
                   ),

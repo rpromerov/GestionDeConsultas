@@ -1,5 +1,6 @@
 import 'dart:ffi';
 
+import 'package:Cosemar/model/equipment.dart';
 import 'package:Cosemar/model/obra.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
 import 'package:flutter/foundation.dart';
@@ -7,29 +8,40 @@ import 'package:flutter/foundation.dart';
 class Trip {
   String tripID;
   String depotId;
+  String equipmentID;
+  Equipment equipment;
+  List<Equipment> avaibleEquipment;
   DateTime programmedArrivalTime;
   DateTime arrivalTime;
   DateTime programmedReturnTime;
   DateTime returnTime;
   DateTime programmedDepartureTime;
+  double latitudSalida;
+  double longitudSalida;
+  double latitudVertedero;
+  double longitudVertedero;
+  double latitudDepot;
+  double longitudDepot;
   TripStates get stateEnum {
     switch (tripState) {
       case 0:
         return TripStates.pending;
       case 1:
-        return TripStates.ongoing;
-      case 2:
         return TripStates.onRoute;
-      case 3:
+      case 2:
         return TripStates.onClient;
-      case 4:
-        return TripStates.departedClient;
-      case 5:
+      case 3:
         return TripStates.deposing;
-      case 6:
+      case 4:
+        return TripStates.onLandfill;
+      case 5:
         return TripStates.toDepot;
+      case 6:
+        return TripStates.onDepot;
       case 7:
         return TripStates.finished;
+      case 8:
+        return TripStates.delayed;
       case 97:
 
       case 99:
@@ -54,5 +66,14 @@ class Trip {
       this.obra,
       this.tripState,
       this.programmedDepartureTime,
-      this.depotId});
+      this.depotId,
+      this.equipmentID,
+      this.latitudSalida,
+      this.longitudSalida,
+      this.latitudVertedero,
+      this.longitudVertedero,
+      this.latitudDepot,
+      this.longitudDepot,
+      this.avaibleEquipment,
+      this.equipment});
 }

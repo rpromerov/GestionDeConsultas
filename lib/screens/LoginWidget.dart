@@ -108,8 +108,8 @@ class _LoginState extends State<Login> {
     }
   }
 
-  final debugController =
-      TextEditingController(text: NetworkProvider.getServerIp);
+  // final debugController =
+  //     TextEditingController(text: NetworkProvider.getServerIp);
 
   @override
   Widget build(BuildContext context) {
@@ -133,14 +133,14 @@ class _LoginState extends State<Login> {
               SizedBox(
                 height: mediaQuery.size.height * 0.05,
               ),
-              TextField(
-                decoration: InputDecoration(labelText: "DEBUG: SERVER IP"),
-                onSubmitted: (value) {
-                  NetworkProvider.serverIp = value;
-                  print("Server IP is now ${NetworkProvider.getServerIp}");
-                },
-                controller: debugController,
-              ),
+              // TextField(
+              //   decoration: InputDecoration(labelText: "DEBUG: SERVER IP"),
+              //   onSubmitted: (value) {
+              //     NetworkProvider.serverIp = value;
+              //     print("Server IP is now ${NetworkProvider.getServerIp}");
+              //   },
+              //   controller: debugController,
+              // ),
               Container(
                 margin: EdgeInsets.all(10),
                 child: networkProvider.connectionStatus ==
@@ -228,6 +228,24 @@ class _LoginState extends State<Login> {
                         ),
                       ),
               ),
+              Spacer(),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                child: Row(
+                  children: [
+                    Text(
+                      "29/06/21",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    Spacer(),
+                    Text(
+                      "v1.4",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              )
             ],
           ),
         ),

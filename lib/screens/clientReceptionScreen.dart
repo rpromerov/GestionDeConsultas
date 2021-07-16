@@ -155,7 +155,6 @@ class _ClientReceptionScreenState extends State<ClientReceptionScreen> {
                       decoration: const InputDecoration(
                           labelText: "RUT", hintText: "RUT de quien recibe."),
                       textInputAction: TextInputAction.next,
-                      keyboardType: TextInputType.number,
                       validator: (rut) {
                         if (rut.isNotEmpty) {
                           return validarRut(rut) ? null : "El rut no es valido";

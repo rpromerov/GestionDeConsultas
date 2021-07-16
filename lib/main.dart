@@ -7,6 +7,8 @@ import 'package:Cosemar/screens/LandfillReceptionScreen.dart';
 import 'package:Cosemar/screens/NotificationScreen.dart';
 import 'package:Cosemar/screens/ReceptionScreen.dart';
 import 'package:Cosemar/screens/TripsScreen.dart';
+import 'package:Cosemar/screens/clientReceptionScreen.dart';
+import 'package:Cosemar/screens/clientReceptionScreenCamera.dart';
 import 'package:Cosemar/screens/receptionScreenGateway.dart';
 import 'package:Cosemar/screens/tripDetailScreen.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +17,17 @@ import 'screens/LoginWidget.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = new MyHttpOverrides();
   runApp(new Main());
+}
+
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
 }
 
 class Main extends StatelessWidget {
@@ -35,7 +47,9 @@ class Main extends StatelessWidget {
           ReceptionScreen.routeName: (ctx) => ReceptionScreen(),
           Login.routeName: (ctx) => Login(),
           CancelTripScreen.routeName: (ctx) => CancelTripScreen(),
-          ReceptionScreenGateway.routeName: (ctx) => ReceptionScreenGateway()
+          ReceptionScreenGateway.routeName: (ctx) => ReceptionScreenGateway(),
+          ClientReceptionScreenCamera.routeName: (ctx) =>
+              ClientReceptionScreen()
         },
       ),
     );

@@ -2,8 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+<key>NSAppTransportSecurity</key>
+<dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+</dict>
 	<key>NSLocationUsageDescription</key>
 	<string>Se necesita para el geofencing</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+    <string>Necesario para el geofencing</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Necesario para el geofencing</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Necesario para el geofencing</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Se necesita para realizar recepciones</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_dartobservatory._tcp</string>

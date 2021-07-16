@@ -1,3 +1,4 @@
+import 'package:Cosemar/Widgets/loadingIndicator.dart';
 import 'package:Cosemar/model/geoDataManager.dart';
 import 'package:Cosemar/model/obra.dart';
 import 'package:Cosemar/model/trip.dart';
@@ -39,6 +40,7 @@ class _DashboardState extends State<Dashboard> {
       final testNetworkManager = Provider.of<NetworkProvider>(context);
       testNetworkManager.populateTrips().then((value) {
         didSetup = true;
+        isLoading = false;
         if (testNetworkManager.trips.isNotEmpty) {
           trips = testNetworkManager.trips
               .where((trip) => trip.stateEnum == TripStates.pending)
@@ -59,7 +61,7 @@ class _DashboardState extends State<Dashboard> {
   }
 
   final globalKey = GlobalKey<ScaffoldState>();
-
+  var isLoading = false;
   @override
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme;
@@ -129,9 +131,65 @@ class _DashboardState extends State<Dashboard> {
                     ))
               ])),
     );
+    void showCompletionConfirmation(BuildContext ctx) {
+      final completionAlert = AlertDialog(
+        title: Text("Viaje finalizado con exito"),
+        actions: [
+          TextButton(
+            child: Text("Ok"),
+            onPressed: () {
+              Navigator.pushReplacementNamed(ctx, Login.routeName);
+            },
+          )
+        ],
+      );
+      showDialog(
+          context: ctx,
+          builder: (ctx) {
+            return completionAlert;
+          });
+    }
+
+    var finishTripButton = RaisedButton(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      color: isReceptionAvaible
+          ? Theme.of(context).accentColor
+          : Theme.of(context).disabledColor,
+      onPressed: () {
+        if (testNetworkManager.currentTrip.tripID == null) {
+          isReceptionAvaible = false;
+          return;
+        } else {
+          setState(() {
+            isLoading = true;
+          });
+          testNetworkManager.finishTrip().then((_) {
+            setState(() {
+              isLoading = false;
+            });
+            showCompletionConfirmation(context);
+          });
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(10),
+        height: mediaQuery.size.height * 0.1,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Finalizar viaje',
+              style:
+                  textStyle.button.copyWith(fontSize: 20, color: Colors.white),
+            ),
+            Icon(Icons.arrow_forward, size: 25, color: Colors.white),
+          ],
+        ),
+      ),
+    );
 
     var receptionButton = testNetworkManager.currentTrip.stateEnum ==
-            TripStates.toDepot
+            TripStates.deposing
         ? RaisedButton(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -139,26 +197,34 @@ class _DashboardState extends State<Dashboard> {
                 ? Theme.of(context).accentColor
                 : Theme.of(context).disabledColor,
             onPressed: () {
-              geoDataManager
-                  .isReceptionAvaible(
-                      testNetworkManager.currentDepot.coordinates['lat'],
-                      testNetworkManager.currentDepot.coordinates['lon'])
-                  .then((isAvaible) {
-                setState(() {
-                  isReceptionAvaible = isAvaible;
-                });
-                isAvaible
-                    ? Navigator.of(context)
-                        .pushNamed(ReceptionScreenGateway.routeName)
-                    : globalKey.currentState.showSnackBar(SnackBar(
-                        content: Text(
-                          testNetworkManager.currentTrip.tripID != null
-                              ? "Recepcion no disponible, distancia con la bodega es muy grande"
-                              : "Recepcion no disponible, debe haber iniciado un viaje",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                      ));
-              });
+              if (testNetworkManager.currentTrip.tripID == null) {
+                isReceptionAvaible = false;
+                return;
+              } else {
+                Navigator.of(context)
+                    .pushNamed(ReceptionScreenGateway.routeName);
+              }
+
+              // geoDataManager
+              //     .isReceptionAvaible(
+              //         testNetworkManager.currentDepot.coordinates['lat'],
+              //         testNetworkManager.currentDepot.coordinates['lon'])
+              //     .then((isAvaible) {
+              //   setState(() {
+              //     isReceptionAvaible = isAvaible;
+              //   });
+              //   isAvaible
+              //       ? Navigator.of(context)
+              //           .pushNamed(ReceptionScreenGateway.routeName)
+              //       : globalKey.currentState.showSnackBar(SnackBar(
+              //           content: Text(
+              //             testNetworkManager.currentTrip.tripID != null
+              //                 ? "Recepcion no disponible, distancia con la bodega es muy grande"
+              //                 : "Recepcion no disponible, debe haber iniciado un viaje",
+              //             style: TextStyle(fontSize: 20),
+              //           ),
+              //         ));
+              // });
             },
             child: Container(
               padding: EdgeInsets.all(10),
@@ -183,9 +249,21 @@ class _DashboardState extends State<Dashboard> {
                 ? Theme.of(context).accentColor
                 : Theme.of(context).disabledColor,
             onPressed: () {
+              if (testNetworkManager.currentTrip.tripID == null) {
+                isReceptionAvaible = false;
+                return;
+              }
+              print(isReceptionAvaible);
               geoDataManager
-                  .isReceptionAvaible(testNetworkManager.currentObra.latitud,
-                      testNetworkManager.currentObra.longitud)
+                  .isReceptionAvaible(
+                      testNetworkManager.currentTrip.stateEnum ==
+                              TripStates.onLandfill
+                          ? testNetworkManager.currentTrip.latitudVertedero
+                          : testNetworkManager.currentObra.latitud,
+                      testNetworkManager.currentTrip.stateEnum ==
+                              TripStates.onLandfill
+                          ? testNetworkManager.currentTrip.longitudVertedero
+                          : testNetworkManager.currentObra.longitud)
                   .then((isAvaible) {
                 setState(() {
                   isReceptionAvaible = isAvaible;
@@ -268,62 +346,75 @@ class _DashboardState extends State<Dashboard> {
               })
         ],
       ),
-      body: Container(
-        padding: EdgeInsets.all(15),
-        child: Column(
-          children: [
-            //greetingCard,
-            SizedBox(
-              height: mediaQuery.size.height * 0.0,
-            ),
-            receptionButton,
-            SizedBox(
-              height: mediaQuery.size.height * 0.03,
-            ),
-            currentTripCard,
-            SizedBox(height: mediaQuery.size.height * 0.05),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          Container(
+            padding: EdgeInsets.all(15),
+            child: Column(
               children: [
-                Text(
-                  'Proximos Viajes',
-                  style: textStyle.headline6,
+                //greetingCard,
+                SizedBox(
+                  height: mediaQuery.size.height * 0.0,
                 ),
-                OutlineButton(
-                    onPressed: () {
-                      Navigator.of(context).pushNamed(TripsScreen.routeName);
-                    },
-                    child: Text('Ver todos'))
+                testNetworkManager.currentTrip.stateEnum ==
+                            TripStates.toDepot ||
+                        testNetworkManager.currentTrip.stateEnum ==
+                            TripStates.onDepot
+                    ? finishTripButton
+                    : receptionButton,
+                SizedBox(
+                  height: mediaQuery.size.height * 0.03,
+                ),
+                currentTripCard,
+                SizedBox(height: mediaQuery.size.height * 0.05),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Proximos Viajes',
+                      style: textStyle.headline6,
+                    ),
+                    OutlineButton(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pushNamed(TripsScreen.routeName);
+                        },
+                        child: Text('Ver todos'))
+                  ],
+                ),
+                isLoading
+                    ? Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: CircularProgressIndicator(),
+                      )
+                    : Container(
+                        height: mediaQuery.size.height * 0.35,
+                        child: testNetworkManager.trips.isEmpty
+                            ? Container()
+                            : Column(children: <Widget>[
+                                for (var trip in trips)
+                                  GestureDetector(
+                                    onTap: () => Navigator.pushNamed(
+                                        context, TripDetailScreen.routeName,
+                                        arguments: trip),
+                                    child: NextTripCard(
+                                      mediaQuery: mediaQuery,
+                                      textStyle: textStyle,
+                                      destination: testNetworkManager
+                                          .fetchObraByID(trip.obraID)
+                                          .nombre,
+                                      origin: 'Cosemar',
+                                      time: DateFormat.jm()
+                                          .format(trip.programmedArrivalTime),
+                                      state: trip.stateEnum,
+                                    ),
+                                  ),
+                              ]))
               ],
             ),
-            !didSetup
-                ? Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(),
-                  )
-                : Container(
-                    height: mediaQuery.size.height * 0.35,
-                    child: Column(children: <Widget>[
-                      for (var trip in trips)
-                        GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                              context, TripDetailScreen.routeName,
-                              arguments: trip),
-                          child: NextTripCard(
-                            mediaQuery: mediaQuery,
-                            textStyle: textStyle,
-                            destination: testNetworkManager
-                                .fetchObraByID(trip.obraID)
-                                .nombre,
-                            origin: 'Cosemar',
-                            time: DateFormat.jm()
-                                .format(trip.programmedArrivalTime),
-                            state: trip.stateEnum,
-                          ),
-                        ),
-                    ]))
-          ],
-        ),
+          ),
+          if (isLoading) LoadingIndicator()
+        ],
       ),
     );
   }
