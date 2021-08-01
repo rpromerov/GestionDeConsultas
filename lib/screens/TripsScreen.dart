@@ -152,7 +152,7 @@ class _TripsScreenState extends State<TripsScreen> {
                               isRead: false,
                               notificationState: trip.stateEnum,
                               notificationText: networkProvider
-                                  .fetchObraByID(trip.obraID)
+                                  .fetchObraByID(trip.obras[0].id)
                                   .nombre,
                               notificationTimestamp: DateFormat.jm()
                                   .format(trip.programmedArrivalTime),

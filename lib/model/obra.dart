@@ -6,14 +6,15 @@ class Obra {
   double longitud;
   String nombreEncargado;
   String telefono;
+  String id;
 
-  Obra({
-    this.nombre,
-    this.comuna,
-    this.direccion,
-    this.latitud,
-    this.longitud,
-    this.nombreEncargado,
-    this.telefono,
-  });
+  Obra(
+      {this.nombre,
+      this.comuna,
+      this.direccion,
+      this.latitud,
+      this.longitud,
+      this.nombreEncargado,
+      this.telefono,
+      this.id});
 }

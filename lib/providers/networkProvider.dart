@@ -287,7 +287,7 @@ class NetworkProvider with ChangeNotifier {
     try {
       await changeState(tripID, TripStates.onRoute);
       currentTrip = trip;
-      currentObra = obras[currentTrip.obraID];
+      currentObra = obras[currentTrip.obras[0].id];
       currentTrip.tripState = TripStates.onRoute.asInt;
     } catch (e) {
       throw HttpException("Error actualizando");
@@ -320,7 +320,9 @@ class NetworkProvider with ChangeNotifier {
     currentTrip.tripState = TripStates.deposing.asInt;
     final requestURL = "$serverIp/api/Viaje/${currentTrip.tripID}";
     final encodedState = jsonEncode({
-      'IdEstadoViaje': TripStates.deposing.asInt,
+      'IdEstadoViaje': currentTrip.obras.length == 1
+          ? TripStates.deposing.asInt
+          : TripStates.onRoute,
       'salidaCliente': encodeTime(null),
     });
     final response = await http.put(requestURL,
@@ -330,7 +332,12 @@ class NetworkProvider with ChangeNotifier {
           "Authorization": "Bearer $token"
         },
         body: encodedState);
-    currentTrip.tripState = TripStates.deposing.asInt;
+    currentTrip.tripState = currentTrip.obras.length == 1
+        ? TripStates.deposing.asInt
+        : TripStates.onRoute;
+    if (currentTrip.obras.length > 1) {
+      currentTrip.obras.removeAt(0);
+    }
 
     notifyListeners();
   }
@@ -468,7 +475,22 @@ class NetworkProvider with ChangeNotifier {
         var currentEquipmentIndex = equipments.indexWhere((e) {
           return e.equipmentID == trip['equipamiento'];
         });
-
+        var codedObras = trip['obrasLink'];
+        var parsedObras = <Obra>[];
+        for (var obra in codedObras) {
+          parsedObras.add(Obra(
+              comuna: obra['comuna'],
+              direccion: obra['direccion'],
+              latitud: obra['latitud'],
+              longitud: obra['longitud'],
+              nombre: obra['nombre'],
+              nombreEncargado: obra['encargado'],
+              telefono: obra['telefono'],
+              id: obra['idObbra']));
+        }
+        for (var obra in parsedObras) {
+          obras[obra.id] = obra;
+        }
         trips.add(
           Trip(
               tripID: trip['idViaje'],
@@ -481,7 +503,7 @@ class NetworkProvider with ChangeNotifier {
               equipment: currentEquipmentIndex == -1
                   ? Equipment()
                   : equipments[currentEquipmentIndex],
-              obraID: trip['idObra'],
+              obras: trip['obrasLink'],
               depotId: trip['idBodega'],
               equipmentID: trip['equipamiento'],
               latitudSalida: trip['baseSalida']['latitud'],
@@ -523,7 +545,7 @@ class NetworkProvider with ChangeNotifier {
           trip.stateEnum != TripStates.pending &&
           trip.stateEnum != TripStates.finished) {
         currentTrip = trip;
-        currentObra = obras[trip.obraID];
+        currentObra = obras[trip.obras[0]];
         currentDepot = depots[trip.depotId];
       }
     }

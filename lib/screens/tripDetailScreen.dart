@@ -166,7 +166,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Widget build(BuildContext context) {
     final networkManager = Provider.of<NetworkProvider>(context);
     final Trip trip = ModalRoute.of(context).settings.arguments;
-    final obra = networkManager.fetchObraByID(trip.obraID);
+    final obra = networkManager.fetchObraByID(trip.obras[0].id);
     final mediaQuery = MediaQuery.of(context);
     final detailButtonsList = detailButtons(trip.stateEnum, context);
     Widget navBarButton(

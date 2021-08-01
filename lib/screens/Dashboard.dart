@@ -401,7 +401,7 @@ class _DashboardState extends State<Dashboard> {
                                       mediaQuery: mediaQuery,
                                       textStyle: textStyle,
                                       destination: testNetworkManager
-                                          .fetchObraByID(trip.obraID)
+                                          .fetchObraByID(trip.obras[0].id)
                                           .nombre,
                                       origin: 'Cosemar',
                                       time: DateFormat.jm()

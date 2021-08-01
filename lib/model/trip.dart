@@ -53,8 +53,7 @@ class Trip {
 
   int tripState;
 
-  String obraID;
-  Obra obra;
+  List<Obra> obras;
 
   Trip(
       {this.tripID,
@@ -62,8 +61,7 @@ class Trip {
       this.arrivalTime,
       this.programmedReturnTime,
       this.returnTime,
-      this.obraID,
-      this.obra,
+      this.obras,
       this.tripState,
       this.programmedDepartureTime,
       this.depotId,
