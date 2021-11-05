@@ -7,6 +7,7 @@ import 'package:Cosemar/providers/networkProvider.dart';
 import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
@@ -17,9 +18,11 @@ class LandfillReceptionScreen extends StatefulWidget {
 }
 
 class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
+  GlobalKey _scaffold = GlobalKey();
   final tonTextFieldController = TextEditingController();
   final nameTextForm = TextEditingController();
   final observationTextField = TextEditingController();
+  final ticketFormController = TextEditingController();
   final formState = GlobalKey<FormState>();
   String imagePath;
 
@@ -61,17 +64,18 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
 
   void showConfirmationDialog(BuildContext ctx) {
     final alert = AlertDialog(
-      title: Text("Recepcion enviada correctamente"),
+      title: Text("Recepción enviada correctamente"),
       actions: [
         TextButton(
           child: Text("Ok"),
           onPressed: () {
-            Navigator.of(context).pushReplacementNamed(Login.routeName);
+            Navigator.of(ctx).pushReplacementNamed(Login.routeName);
           },
         )
       ],
     );
     showDialog(
+      barrierDismissible: false,
       context: ctx,
       builder: (ctx) {
         return alert;
@@ -94,23 +98,25 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
             base64Image: encodedImage,
             name: nameTextForm.text,
             observations: observationTextField.text,
-            tons: tonTextFieldController.text.replaceAll(",", "."))
-        .then((_) {
-      Navigator.of(context).pushReplacementNamed(Login.routeName);
+            tons: tonTextFieldController.text.replaceAll(",", "."),
+            ticketNumber: ticketFormController.text)
+        .whenComplete(() {
+      showConfirmationDialog(_scaffold.currentContext);
     });
   }
+
+  var isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     final network = Provider.of<NetworkProvider>(context);
     final size = MediaQuery.of(context).size;
-    var isLoading = false;
+
     var floatingButton = Container(
-      width: 125,
+      width: 100,
       height: 50,
       child: RaisedButton(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        color: Colors.green,
+        color: Colors.blueAccent,
         child: Padding(
           padding: const EdgeInsets.only(left: 0.0),
           child: Row(
@@ -131,23 +137,69 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
           ),
         ),
         onPressed: () {
-          isLoading = true;
-          sendLandfillReception(context).then((v) {
-            setState(() {
-              isLoading = false;
-            });
-          });
+          if (formState.currentState.validate()) {
+            formState.currentState.save();
+
+            if (picture == null) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text("Debe haber tomado una foto"),
+              ));
+              return;
+            }
+            if (!isLoading) {
+              setState(() {
+                isLoading = true;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Enviando,puede tomar un momento'),
+              ));
+              sendLandfillReception(context).whenComplete(() {
+                setState(() {
+                  isLoading = false;
+                });
+              });
+            }
+          }
         },
       ),
     );
 
+    var cameraButton = Row(
+      children: [
+        Spacer(),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SizedBox(
+            width: 175,
+            height: 50,
+            child: showPicture
+                ? ElevatedButton.icon(
+                    icon: Icon(Icons.replay),
+                    onPressed: () => retakePicture(),
+                    label: Text("Tomar otra foto",
+                        style: Theme.of(context).textTheme.button.copyWith(
+                              fontSize: 15,
+                              color: Colors.white,
+                            )),
+                  )
+                : ElevatedButton.icon(
+                    icon: Icon(Icons.camera_alt),
+                    onPressed: () => takePicture(),
+                    label: Text("Tomar foto",
+                        style: Theme.of(context).textTheme.button.copyWith(
+                              fontSize: 20,
+                              color: Colors.white,
+                            )),
+                  ),
+          ),
+        ),
+        Spacer()
+      ],
+    );
     return Scaffold(
+      key: _scaffold,
       appBar: AppBar(
         title: Text("Recepción de vertedero"),
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
-        child: floatingButton,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       body: Stack(
@@ -157,6 +209,25 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
               padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
               child: Column(
                 children: [
+                  SizedBox(
+                    width: size.width,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(child: cameraButton),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 20),
+                          child: SizedBox(
+                            width: 130,
+                            child: floatingButton,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10.0),
                     child: Form(
@@ -191,6 +262,22 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
                             textInputAction: TextInputAction.next,
                           ),
                           TextFormField(
+                            decoration: InputDecoration(
+                                labelText: "Número de ticket",
+                                hintText: "Ticket"),
+                            controller: ticketFormController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (value) {
+                              return value.isNotEmpty
+                                  ? null
+                                  : "Debe ingresar un numero de ticket";
+                            },
+                            textInputAction: TextInputAction.next,
+                          ),
+                          TextFormField(
                             textInputAction: TextInputAction.done,
                             decoration: InputDecoration(
                               labelText: "Observaciones",
@@ -204,26 +291,6 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
                   ),
                   SizedBox(
                     height: 10,
-                  ),
-                  Row(
-                    children: [
-                      Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: showPicture
-                            ? ElevatedButton.icon(
-                                icon: Icon(Icons.replay),
-                                onPressed: () => retakePicture(),
-                                label: Text("Tomar otra foto"),
-                              )
-                            : ElevatedButton.icon(
-                                icon: Icon(Icons.camera_alt),
-                                onPressed: () => takePicture(),
-                                label: Text("Tomar foto"),
-                              ),
-                      ),
-                      Spacer()
-                    ],
                   ),
                   Container(
                     height: size.height * 0.6,

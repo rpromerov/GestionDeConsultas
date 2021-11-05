@@ -15,6 +15,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/LoginWidget.dart';
 
+class GlobalNavigator {
+  static var navigatorKey = GlobalKey<NavigatorState>();
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = new MyHttpOverrides();
@@ -36,6 +40,7 @@ class Main extends StatelessWidget {
     return ChangeNotifierProvider.value(
       value: NetworkProvider(),
       builder: (ctx, _) => MaterialApp(
+        navigatorKey: GlobalNavigator.navigatorKey,
         title: 'Cosemar',
         home: Login(),
         theme: ThemeData(primarySwatch: Colors.green),

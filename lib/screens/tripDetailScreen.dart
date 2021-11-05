@@ -166,7 +166,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Widget build(BuildContext context) {
     final networkManager = Provider.of<NetworkProvider>(context);
     final Trip trip = ModalRoute.of(context).settings.arguments;
-    final obra = networkManager.fetchObraByID(trip.obras[0].id);
+    final obra = networkManager.obras.isNotEmpty
+        ? networkManager.fetchObraByID(trip.obras[0].id)
+        : null;
     final mediaQuery = MediaQuery.of(context);
     final detailButtonsList = detailButtons(trip.stateEnum, context);
     Widget navBarButton(
@@ -177,19 +179,23 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         case TripStates.pending:
           return FlatButton(
             onPressed: () {
-              print("iniciando viaje...");
-              toggleLoading(true);
+              if (!isLoading) {
+                toggleLoading(true);
+                print("iniciando viaje...");
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('Iniciando viaje,puede tomar un momento'),
+                ));
 
-              if (networkManager.currentTrip.tripID == null) {
-                networkManager.startTrip(tripID).whenComplete(() {
-                  showAlertDialog(
-                    "Viaje iniciado correctamente",
-                    context,
-                  );
-                  toggleLoading(false);
-                });
+                if (networkManager.currentTrip.tripID == null) {
+                  networkManager.startTrip(tripID).whenComplete(() {
+                    showAlertDialog(
+                      "Viaje iniciado correctamente",
+                      context,
+                    );
+                    toggleLoading(false);
+                  });
+                }
               }
-              toggleLoading(false);
             },
             child: Row(
               children: [
@@ -218,7 +224,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   isAvaible
                       ? Navigator.of(context)
                           .pushNamed(ReceptionScreenGateway.routeName)
-                      : globalKey.currentState.showSnackBar(SnackBar(
+                      : ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(
                             networkManager.currentTrip.tripID != null
                                 ? "Recepcion no disponible, distancia con el cliente es muy grande"
@@ -252,20 +258,73 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       }
     }
 
+    Map<String, String> contactDetailsText() {
+      if (trip.stateEnum == null) {
+        return {'nombre': "", 'telefono': "", 'direccion': "", 'comuna': ""};
+      }
+      switch (trip.stateEnum) {
+        case TripStates.departedClient:
+        case TripStates.deposing:
+        case TripStates.onLandfill:
+          return {
+            'nombre': trip.vertedero.encargado,
+            'telefono': trip.vertedero.telephone,
+            'direccion': trip.vertedero.adress,
+            'comuna': trip.vertedero.comuna
+          };
+          break;
+        case TripStates.toDepot:
+        case TripStates.onDepot:
+          return {
+            'nombre': trip.deposito.encargado,
+            'telefono': trip.deposito.telephone,
+            'direccion': trip.deposito.adress,
+            'comuna': trip.deposito.comuna
+          };
+          break;
+        default:
+          return {
+            'nombre': trip.obras.first.nombreEncargado,
+            'telefono': trip.obras.first.telefono,
+            'direccion': trip.obras.first.direccion,
+            'comuna': trip.obras.first.comuna
+          };
+          break;
+      }
+    }
+
+    Map<String, String> computedContactText = contactDetailsText();
+
+    String destinationText() {
+      switch (trip.stateEnum) {
+        case TripStates.departedClient:
+        case TripStates.deposing:
+          return trip.vertedero.name;
+          break;
+        case TripStates.toDepot:
+        case TripStates.onDepot:
+          return trip.deposito.name;
+          break;
+        default:
+          return obra.nombre;
+          break;
+      }
+    }
+
     var tripDataCard = Card(
       elevation: 3,
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [DetailText('Origen'), DetailText("Cosemar")],
+            children: [DetailText('Origen'), DetailText(trip.baseSalida.name)],
           ),
           Divider(
             thickness: 1.5,
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [DetailText('Destino'), DetailText(obra.nombre)],
+            children: [DetailText('Destino'), DetailText(destinationText())],
           ),
           Divider(
             thickness: 1.5,
@@ -300,6 +359,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         ],
       ),
     );
+
     Equipment currentEquipment = networkManager.currentTrip.equipment;
     var equipmentCard = Card(
         child: Row(
@@ -316,10 +376,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     : trip.equipment.name,
                 onChanged: (value) {
                   setState(() {
-                    currentEquipment = value as Equipment;
+                    final selectedEquipment = value as Equipment;
                     networkManager.currentTrip.equipmentID =
-                        currentEquipment.equipmentID;
-                    networkManager.currentTrip.equipment = currentEquipment;
+                        selectedEquipment.equipmentID;
+                    networkManager.currentTrip.equipment = selectedEquipment;
                   });
                 },
                 items: trip.avaibleEquipment.map((equipment) {
@@ -356,8 +416,13 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             child: Column(
               children: [
                 Container(
-                  margin: EdgeInsets.all(5),
-                  child: equipmentCard,
+                  margin: EdgeInsets.all(15),
+                  child: trip.tipoViaje == 2
+                      ? Text(
+                          "Carga Trasera",
+                          style: TextStyle(fontSize: 30),
+                        )
+                      : equipmentCard,
                 ),
                 Container(
                   margin: EdgeInsets.all(5),
@@ -395,7 +460,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                           Row(
                             children: [
                               DetailText('Nombre'),
-                              DetailText(obra.nombreEncargado)
+                              DetailText(computedContactText['nombre'])
                             ],
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           ),
@@ -415,7 +480,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                 },
                                 child: Container(
                                   child: Text(
-                                    obra.telefono,
+                                    computedContactText['telefono'],
                                     style: Theme.of(context)
                                         .textTheme
                                         .headline5
@@ -431,15 +496,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                           Divider(
                             thickness: 1.5,
                           ),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                DetailText('Dirección'),
-                                DetailText('${obra.direccion},${obra.comuna}')
-                              ],
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            ),
+                          Row(
+                            children: [
+                              DetailText('Dirección'),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: DetailText(computedContactText[
+                                            'comuna'] !=
+                                        null
+                                    ? '${computedContactText['direccion']},${computedContactText['comuna']}'
+                                    : '${computedContactText['direccion']}'),
+                              )
+                            ],
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           )
                         ],
                       )),

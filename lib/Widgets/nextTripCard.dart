@@ -55,16 +55,21 @@ class NextTripCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.contain,
-                        child: Text(
-                          destination,
-                          style: textStyle.headline5,
-                        ),
+                  Container(
+                    width: mediaQuery.size.width * 0.55,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Row(
+                        children: [
+                          Text(
+                            destination,
+                            overflow: TextOverflow.ellipsis,
+                            style: textStyle.headline5.copyWith(fontSize: 28),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                   Text(
                     time,

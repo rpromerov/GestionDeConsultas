@@ -79,6 +79,7 @@ class NetworkProvider with ChangeNotifier {
   void backgroundUpdate() {
     const distanceLimit = 850;
     Timer.periodic(Duration(minutes: 1), (timer) async {
+      if (timer.tick % 5 == 0) updateTrips();
       print("fired timer");
       if (currentTrip == null) {
         final trip = trips.firstWhere((trip) {
@@ -237,21 +238,47 @@ class NetworkProvider with ChangeNotifier {
     if (currentTrip == null) {
       return false;
     }
-    return await geoData.isReceptionAvaible(
-        currentTrip.stateEnum == TripStates.onLandfill
-            ? currentTrip.latitudVertedero
-            : currentObra.latitud,
-        currentTrip.stateEnum == TripStates.onLandfill
-            ? currentTrip.longitudVertedero
-            : currentObra.longitud);
+    double targetLat;
+    double targetLon;
+    switch (currentTrip.stateEnum) {
+      case TripStates.deposing:
+      case TripStates.onLandfill:
+        targetLat = currentTrip.latitudVertedero;
+        targetLon = currentTrip.longitudVertedero;
+        break;
+      case TripStates.onDepot:
+      case TripStates.toDepot:
+        targetLat = currentTrip.latitudDepot;
+        targetLon = currentTrip.longitudDepot;
+        break;
+      default:
+        targetLat = currentTrip.obras[0].latitud;
+        targetLon = currentTrip.obras[0].latitud;
+    }
+
+    return await geoData.isReceptionAvaible(targetLat, targetLon);
   }
 
   Future<void> changeState(String tripID, TripStates state) async {
     final requestURL = "$getServerIp/api/Viaje/$tripID";
+    print(avaibleEquipments);
+    var equipment = Equipment(equipmentID: '', name: "Sin equipo");
+    var nextTrip = trips.firstWhere((e) {
+      return e.tripID == tripID;
+    });
+    print("nextID ${nextTrip.equipment.equipmentID}");
+    if (avaibleEquipments.isNotEmpty && nextTrip.equipmentID != null) {
+      equipment = avaibleEquipments.firstWhere((test) {
+        print(test.equipmentID);
+        return test.equipmentID == nextTrip.equipmentID;
+      });
+    }
+
     final encodedState = jsonEncode({
       'IdEstadoViaje': state.asInt,
       'inicio': encodeTime(null),
-      'equipamiento': currentTrip.equipmentID
+      if (equipment.equipmentID.isNotEmpty || nextTrip.equipmentID != null)
+        'equipamiento': equipment.equipmentID
     });
     final response = await http.put(requestURL,
         headers: {
@@ -284,13 +311,16 @@ class NetworkProvider with ChangeNotifier {
   Future<void> startTrip(String tripID) async {
     final trip = trips.firstWhere((trip) => tripID == trip.tripID);
     print("Starting trip...");
+    if (trip.equipment == null) {
+      trip.equipment = Equipment(name: "Sin equipo", equipmentID: '');
+    }
     try {
       await changeState(tripID, TripStates.onRoute);
       currentTrip = trip;
       currentObra = obras[currentTrip.obras[0].id];
       currentTrip.tripState = TripStates.onRoute.asInt;
     } catch (e) {
-      throw HttpException("Error actualizando");
+      throw HttpException("Error actualizando: $e");
     }
 
     notifyListeners();
@@ -322,7 +352,7 @@ class NetworkProvider with ChangeNotifier {
     final encodedState = jsonEncode({
       'IdEstadoViaje': currentTrip.obras.length == 1
           ? TripStates.deposing.asInt
-          : TripStates.onRoute,
+          : TripStates.onRoute.asInt,
       'salidaCliente': encodeTime(null),
     });
     final response = await http.put(requestURL,
@@ -365,14 +395,19 @@ class NetworkProvider with ChangeNotifier {
       {String nombre,
       String rut,
       String observaciones,
-      String base64Firma}) async {
+      String base64Firma,
+      String equipoRetiradoID,
+      String kgRetirados}) async {
     final requestURL = "$serverIp/api/Recepcion/";
     final encodedState = jsonEncode({
       'IdViaje': currentTrip.tripID,
       'Recepcionado': "$nombre $rut",
       'FechaRecepcion': encodeTime(null),
       'Observaciones': observaciones,
-      'Firma': base64Firma
+      'Firma': base64Firma,
+      'idObra': currentTrip.obras[0].id,
+      if (equipoRetiradoID.isNotEmpty) 'retiradoID': equipoRetiradoID,
+      if (currentTrip.tipoViaje == 2) 'kgRetirados': kgRetirados
     });
     final response = await http
         .post(requestURL,
@@ -390,7 +425,8 @@ class NetworkProvider with ChangeNotifier {
       {String base64Image,
       String tons,
       String name,
-      String observations}) async {
+      String observations,
+      String ticketNumber}) async {
     final requestURL = "$serverIp/api/RecepcionVertedero/";
     final encodedState = jsonEncode({
       'IdViaje': currentTrip.tripID,
@@ -398,7 +434,8 @@ class NetworkProvider with ChangeNotifier {
       'FechaRecepcion': encodeTime(null),
       'Observaciones': observations,
       'ValeRecepcion': base64Image,
-      'Toneladas': double.parse(tons)
+      'Toneladas': double.parse(tons),
+      'ticketVertedero': ticketNumber
     });
     final response = await http
         .post(requestURL,
@@ -457,8 +494,50 @@ class NetworkProvider with ChangeNotifier {
     return obras[id];
   }
 
+  Future<List<Equipment>> fetchEquiposParaRetiro(String obraID) async {
+    final obraURL = "$serverIp/api/equipoRetiro/$obraID";
+    final response = await http.get(obraURL, headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token"
+    });
+    if (response.statusCode != 200) {
+      return [];
+    }
+    print("status ${response.statusCode}, body ${response.body}");
+    var decodedResponse = jsonDecode(response.body);
+
+    var decodedResponseList = List.from(decodedResponse);
+    var decodedEquipos = <Equipment>[];
+    for (var equipo in decodedResponseList) {
+      decodedEquipos.add(new Equipment(
+          equipmentID: equipo['idEquipamiento'], name: equipo['nombre']));
+    }
+    return decodedEquipos;
+  }
+
+  Future<void> updateTrips() async {
+    final tripsURL = "$serverIp/api/Viaje/ViajesChoferNuevo/$_driverID";
+    try {
+      final response = await http.get(tripsURL, headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer $token"
+      });
+      var decodedResponse = jsonDecode(response.body);
+      var tripList = List.from(decodedResponse);
+      for (var trip in tripList) {
+        trips.firstWhere((testTrip) {
+          return testTrip.tripID == trip['idViaje'];
+        }).tripState = trip['idEstadoViaje'];
+      }
+    } catch (e) {}
+  }
+
   Future<void> populateTrips() async {
-    final tripsURL = "$serverIp/api/Viaje/ViajesChofer/$_driverID";
+    trips.clear();
+    obras.clear();
+    final tripsURL = "$serverIp/api/Viaje/ViajesChoferNuevo/$_driverID";
     try {
       final response = await http.get(tripsURL, headers: {
         "Content-Type": "application/json",
@@ -471,56 +550,109 @@ class NetworkProvider with ChangeNotifier {
       }
       final responseData = jsonDecode(response.body);
       for (var trip in responseData) {
+        print(trip);
         var equipments = await fetchEquipments(trip['idViaje']);
+        avaibleEquipments = equipments;
+        var tripEquipmentIsNotAvaible = avaibleEquipments.indexWhere((test) {
+              if (trip['equipamiento'] == null) {
+                return true;
+              }
+              return test.equipmentID == trip['equipamiento']['idEquipamiento'];
+            }) ==
+            -1;
+
+        if (tripEquipmentIsNotAvaible) {
+          avaibleEquipments.add(Equipment(
+              equipmentID: trip['equipamiento']['idEquipamiento'],
+              name: trip['equipamiento']['nombre']));
+        }
         var currentEquipmentIndex = equipments.indexWhere((e) {
-          return e.equipmentID == trip['equipamiento'];
+          return e.equipmentID == trip['idEquipamiento'];
         });
-        var codedObras = trip['obrasLink'];
+
+        var codedObras = List.from(trip['servicioObra']);
+        List<dynamic> codedObrasLink = codedObras;
+
         var parsedObras = <Obra>[];
-        for (var obra in codedObras) {
+        for (var fullObra in codedObras) {
+          print(fullObra['obra']);
+          var obra = fullObra['obra'];
+
           parsedObras.add(Obra(
+              equiposParaRetiro: await fetchEquiposParaRetiro(obra['idObra']),
               comuna: obra['comuna'],
               direccion: obra['direccion'],
               latitud: obra['latitud'],
-              longitud: obra['longitud'],
+              longitud: obra['longuitud'],
               nombre: obra['nombre'],
               nombreEncargado: obra['encargado'],
               telefono: obra['telefono'],
-              id: obra['idObbra']));
+              id: obra['idObra']));
         }
-        for (var obra in parsedObras) {
-          obras[obra.id] = obra;
-        }
+        print("trip add  ${trip['equipamiento']}");
+        var encodedBaseSalida = trip['baseSalida'];
+        var encodedVertedero = trip['disposicion'];
+        var encodedDeposito = trip['bodega'];
+        Depot baseSalida = new Depot(
+            depotId: encodedBaseSalida['idBaseSalida'],
+            adress: encodedBaseSalida['direccion'],
+            name: encodedBaseSalida['nombre'],
+            comuna: encodedBaseSalida['comuna']);
+        Depot vertedero = new Depot(
+            depotId: encodedVertedero['idDisposicionFinal'],
+            adress: encodedVertedero['direccion'],
+            name: encodedVertedero['nombre'],
+            encargado: encodedVertedero['encargado'],
+            telephone: encodedVertedero['telefono'],
+            comuna: encodedVertedero['comuna']);
+
+        Depot bodega = new Depot(
+            depotId: encodedDeposito['idBaseSalida'],
+            adress: encodedDeposito['direccion'],
+            name: encodedDeposito['nombre'],
+            encargado: encodedDeposito['encargado'],
+            telephone: encodedDeposito['telefono'],
+            comuna: encodedDeposito['comuna']);
+        print(trip['tipoViaje']);
+
         trips.add(
           Trip(
               tripID: trip['idViaje'],
-              programmedArrivalTime: parseTime(trip['salidaProgramada']),
-              programmedReturnTime: parseTime(trip['llegadaBaseProgramada']),
-              programmedDepartureTime: parseTime(trip['salidaProgramada']),
+              programmedArrivalTime: parseTime(trip['inicioProgramado']),
+              programmedReturnTime: parseTime(trip['finProgramado']),
+              programmedDepartureTime: parseTime(trip['inicioProgramado']),
               tripState: trip['idEstadoViaje'],
+              deposito: bodega,
               // tripState: 0,
               avaibleEquipment: equipments,
+              tipoViaje: trip['tipoViaje'],
               equipment: currentEquipmentIndex == -1
-                  ? Equipment()
+                  ? Equipment(name: "Sin Equipo", equipmentID: "")
                   : equipments[currentEquipmentIndex],
-              obras: trip['obrasLink'],
+              obras: parsedObras,
+              baseSalida: baseSalida,
               depotId: trip['idBodega'],
-              equipmentID: trip['equipamiento'],
+              equipmentID: trip['idEquipamiento'],
               latitudSalida: trip['baseSalida']['latitud'],
               longitudSalida: trip['baseSalida']['longuitud'],
-              latitudVertedero: trip['disposicionFinal']['latitud'],
-              longitudVertedero: trip['disposicionFinal']['longuitud'],
+              latitudVertedero: trip['disposicion']['latitud'],
+              longitudVertedero: trip['disposicion']['longuitud'],
               latitudDepot: trip['bodega']['latitud'],
-              longitudDepot: trip['bodega']['longuitud']),
+              longitudDepot: trip['bodega']['longuitud'],
+              vertedero: vertedero),
         );
-        if (!obras.containsKey(trip['idObra'])) {
-          obras[trip['idObra']] = await fetchObra(trip['idObra']);
+        print(trip['servicioObra']);
+        for (var obra in parsedObras) {
+          if (!obras.containsKey(obra.id)) {
+            obras[obra.id] = obra;
+          }
         }
 
-        if (!depots.containsKey(trip['idBodega'])) {
+        if (!depots.containsKey(trip['bodega']['idBaseSalida'])) {
           final bodega = trip['bodega'];
+          print("Bodega: ${bodega['nombre']}");
           final newDepot = Depot(
-              depotId: bodega['idBodega'],
+              depotId: bodega['idBaseSalida'],
               name: bodega['nombre'],
               adress: bodega['direccion'],
               comuna: bodega['comuna'],
@@ -532,7 +664,6 @@ class NetworkProvider with ChangeNotifier {
               telephone: bodega['telefono']);
           depots[newDepot.depotId] = newDepot;
         }
-        print(trips.last.avaibleEquipment);
       }
     } catch (error) {
       print(error.toString());
@@ -545,7 +676,7 @@ class NetworkProvider with ChangeNotifier {
           trip.stateEnum != TripStates.pending &&
           trip.stateEnum != TripStates.finished) {
         currentTrip = trip;
-        currentObra = obras[trip.obras[0]];
+        currentObra = trip.obras.isNotEmpty ? trip.obras[0] : null;
         currentDepot = depots[trip.depotId];
       }
     }
@@ -560,8 +691,6 @@ class NetworkProvider with ChangeNotifier {
       "Authorization": "Bearer $token"
     });
     final decodedResponse = jsonDecode(response.body);
-    print("decodedResponse: ${tripID}");
-    print("decodedResponse: ${decodedResponse}");
     List<Equipment> avaibleEquipment = [];
     for (var equipment in decodedResponse) {
       avaibleEquipment.add(Equipment(
@@ -625,7 +754,6 @@ class NetworkProvider with ChangeNotifier {
         .decode(base64.decode(base64.normalize(token.split(".")[1]))))['exp'];
     DateTime expireDate =
         DateTime.fromMillisecondsSinceEpoch(expireSeconds * 1000);
-    print(expireDate);
     return expireDate;
   }
 
@@ -649,7 +777,6 @@ class NetworkProvider with ChangeNotifier {
         });
         final responseData = json.decode(response.body);
         final statusCode = response.statusCode;
-        print(statusCode);
         if (statusCode == 200) {
           _userName = responseData['nombreCompleto'];
           _token = responseData['token'];

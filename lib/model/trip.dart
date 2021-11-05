@@ -1,5 +1,6 @@
 import 'dart:ffi';
 
+import 'package:Cosemar/model/depot.dart';
 import 'package:Cosemar/model/equipment.dart';
 import 'package:Cosemar/model/obra.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
@@ -22,6 +23,10 @@ class Trip {
   double longitudVertedero;
   double latitudDepot;
   double longitudDepot;
+  Depot baseSalida;
+  Depot vertedero;
+  Depot deposito;
+  int tipoViaje;
   TripStates get stateEnum {
     switch (tripState) {
       case 0:
@@ -53,7 +58,7 @@ class Trip {
 
   int tripState;
 
-  List<Obra> obras;
+  List<Obra> obras = [];
 
   Trip(
       {this.tripID,
@@ -73,5 +78,9 @@ class Trip {
       this.latitudDepot,
       this.longitudDepot,
       this.avaibleEquipment,
-      this.equipment});
+      this.equipment,
+      this.baseSalida,
+      this.tipoViaje,
+      this.vertedero,
+      this.deposito});
 }

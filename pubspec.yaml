@@ -30,14 +30,14 @@ dependencies:
   flutter_secure_storage: ^3.3.1+1
   url_launcher: ^5.7.10
   synchronized: ^2.2.0+2
-  integration_test: ^1.0.2+2
   intl: ^0.17.0
   flutter_signature_pad: ^2.0.3
   camera:
   path_provider:
   path:
-  searchable_dropdown:
+  searchable_dropdown: ^1.1.2
   dart_rut_validator:
+  get:
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -63,6 +63,7 @@ flutter:
   assets:
      - Assets/images/cosemarLogo.png
      - Assets/images/cosemarText.png
+     - Assets/images/background.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

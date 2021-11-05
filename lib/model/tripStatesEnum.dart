@@ -67,6 +67,14 @@ extension tripNames on TripStates {
         return "Atrasado";
       case TripStates.toConfirm:
         return "Por confirmar";
+      case TripStates.ongoing:
+        return "Activo";
+      case TripStates.toClient:
+        return "Hacia cliente";
+      case TripStates.ongoing:
+        return "Activo";
+      case TripStates.departedClient:
+        return "Salidida desde cliente";
     }
   }
 }

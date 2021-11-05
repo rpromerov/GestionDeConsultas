@@ -10,6 +10,9 @@ class GeoDataManager {
   /// are denied the `Future` will return an error.
   ///
   Future<bool> isReceptionAvaible(double latitud, double longitud) async {
+    var distancia = await getDistance(latitud, longitud);
+    print("latitud $latitud,longitud $longitud");
+    print(distancia);
     if (await getDistance(latitud, longitud) <= 850) {
       return true;
     } else {
@@ -63,7 +66,7 @@ class GeoDataManager {
 
     final currentDistance = Geolocator.distanceBetween(
         currentPosition.latitude, currentPosition.longitude, latitud, longitud);
-    print("$currentDistance m");
+    print("distancia $currentDistance ");
     return currentDistance;
   }
 }

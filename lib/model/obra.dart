@@ -1,3 +1,5 @@
+import 'package:Cosemar/model/equipment.dart';
+
 class Obra {
   String nombre;
   String comuna;
@@ -7,6 +9,7 @@ class Obra {
   String nombreEncargado;
   String telefono;
   String id;
+  List<Equipment> equiposParaRetiro = [];
 
   Obra(
       {this.nombre,
@@ -16,5 +19,14 @@ class Obra {
       this.longitud,
       this.nombreEncargado,
       this.telefono,
-      this.id});
+      this.id,
+      this.equiposParaRetiro});
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    print(
+      "nombre: $nombre, comuna: $comuna",
+    );
+  }
 }

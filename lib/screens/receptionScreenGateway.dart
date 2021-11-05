@@ -8,8 +8,8 @@ import 'package:provider/provider.dart';
 
 class ReceptionScreenGateway extends StatelessWidget {
   static const routeName = '/receptionScreen';
-  const ReceptionScreenGateway({Key key}) : super(key: key);
 
+  ReceptionScreenGateway();
   @override
   Widget build(BuildContext context) {
     final networkProvider = Provider.of<NetworkProvider>(context);

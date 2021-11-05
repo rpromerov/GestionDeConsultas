@@ -116,139 +116,155 @@ class _LoginState extends State<Login> {
     final mediaQuery = MediaQuery.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Container(
-          padding: EdgeInsets.only(top: 20),
-          alignment: Alignment.center,
-          height: mediaQuery.size.height,
-          child: Column(
-            children: [
-              SizedBox(
-                height: mediaQuery.size.height * 0.1,
-              ),
-              Container(
-                height: mediaQuery.size.height * 0.3,
-                child: Image.asset('Assets/images/cosemarLogo.png'),
-              ),
-              SizedBox(
-                height: mediaQuery.size.height * 0.05,
-              ),
-              // TextField(
-              //   decoration: InputDecoration(labelText: "DEBUG: SERVER IP"),
-              //   onSubmitted: (value) {
-              //     NetworkProvider.serverIp = value;
-              //     print("Server IP is now ${NetworkProvider.getServerIp}");
-              //   },
-              //   controller: debugController,
-              // ),
-              Container(
-                margin: EdgeInsets.all(10),
-                child: networkProvider.connectionStatus ==
-                        ConnectionStatus.connecting
-                    ? Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    : Card(
-                        color: Colors.white,
-                        elevation: 10,
-                        child: Container(
-                          margin: EdgeInsets.all(15),
-                          child: Column(
-                            children: [
-                              if (_showEmptyPasswordNotice ||
-                                  _showEmptyUserFieldNotice)
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      getNoticeText,
-                                      style: TextStyle(
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15),
-                                    ),
-                                  ],
-                                ),
-                              TextField(
-                                controller: _userController,
-                                decoration:
-                                    InputDecoration(labelText: 'Usuario'),
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.next,
-                              ),
-                              TextField(
-                                controller: _passwordController,
-                                decoration:
-                                    InputDecoration(labelText: 'Contraseña'),
-                                obscureText: true,
-                                onSubmitted: (_) {
-                                  _goToDashboard(context);
-                                },
-                              ),
-                              Container(
-                                height: 10,
-                              ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          SizedBox(
+            child: Image.asset(
+              "Assets/images/background.png",
+              fit: BoxFit.fitHeight,
+            ),
+            height: mediaQuery.size.height,
+            width: mediaQuery.size.width,
+          ),
+          SingleChildScrollView(
+            child: Container(
+              padding: EdgeInsets.only(top: 20),
+              alignment: Alignment.center,
+              height: mediaQuery.size.height,
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: mediaQuery.size.height * 0.1,
+                  ),
+                  Container(
+                    height: mediaQuery.size.height * 0.3,
+                    child: Image.asset('Assets/images/cosemarLogo.png'),
+                  ),
+                  SizedBox(
+                    height: mediaQuery.size.height * 0.05,
+                  ),
+                  // TextField(
+                  //   decoration: InputDecoration(labelText: "DEBUG: SERVER IP"),
+                  //   onSubmitted: (value) {
+                  //     NetworkProvider.serverIp = value;
+                  //     print("Server IP is now ${NetworkProvider.getServerIp}");
+                  //   },
+                  //   controller: debugController,
+                  // ),
+                  Container(
+                    margin: EdgeInsets.all(10),
+                    child: networkProvider.connectionStatus ==
+                            ConnectionStatus.connecting
+                        ? Center(
+                            child: CircularProgressIndicator(),
+                          )
+                        : Card(
+                            color: Colors.white,
+                            elevation: 10,
+                            child: Container(
+                              margin: EdgeInsets.all(15),
+                              child: Column(
                                 children: [
-                                  Row(
-                                    children: [
-                                      Checkbox(
-                                        value: _rememberMe,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            this._rememberMe = value;
-                                            networkProvider.saveEmail = value;
-                                          });
-                                        },
-                                      ),
-                                      Text('Recordarme')
-                                    ],
-                                  ),
-                                  RaisedButton(
-                                    color: Theme.of(context).accentColor,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                    onPressed: () => _goToDashboard(context),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text(
-                                        'Ingresar',
-                                        style: TextStyle(
-                                            fontSize: 25, color: Colors.white),
-                                      ),
+                                  if (_showEmptyPasswordNotice ||
+                                      _showEmptyUserFieldNotice)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          getNoticeText,
+                                          style: TextStyle(
+                                              color: Colors.red,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15),
+                                        ),
+                                      ],
                                     ),
+                                  TextField(
+                                    controller: _userController,
+                                    decoration:
+                                        InputDecoration(labelText: 'Usuario'),
+                                    keyboardType: TextInputType.emailAddress,
+                                    textInputAction: TextInputAction.next,
+                                  ),
+                                  TextField(
+                                    controller: _passwordController,
+                                    decoration: InputDecoration(
+                                        labelText: 'Contraseña'),
+                                    obscureText: true,
+                                    onSubmitted: (_) {
+                                      _goToDashboard(context);
+                                    },
+                                  ),
+                                  Container(
+                                    height: 10,
+                                  ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Checkbox(
+                                            value: _rememberMe,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                this._rememberMe = value;
+                                                networkProvider.saveEmail =
+                                                    value;
+                                              });
+                                            },
+                                          ),
+                                          Text('Recordarme')
+                                        ],
+                                      ),
+                                      RaisedButton(
+                                        color: Theme.of(context).accentColor,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20)),
+                                        onPressed: () =>
+                                            _goToDashboard(context),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(6.0),
+                                          child: Text(
+                                            'Ingresar',
+                                            style: TextStyle(
+                                                fontSize: 25,
+                                                color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
+                  ),
+                  Spacer(),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    child: Row(
+                      children: [
+                        Text(
+                          "01/11/21",
+                          style: TextStyle(color: Colors.grey),
                         ),
-                      ),
+                        Spacer(),
+                        Text(
+                          "v1.8.3",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
               ),
-              Spacer(),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                child: Row(
-                  children: [
-                    Text(
-                      "29/06/21",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    Spacer(),
-                    Text(
-                      "v1.4",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              )
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

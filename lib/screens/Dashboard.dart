@@ -60,6 +60,21 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
+  String noObraText() {
+    final NetworkProvider networkProvider =
+        Provider.of<NetworkProvider>(context);
+    if (networkProvider.currentTrip.stateEnum == TripStates.deposing ||
+        networkProvider.currentTrip.stateEnum == TripStates.onLandfill) {
+      return "A vertedero";
+    }
+    if (networkProvider.currentTrip.stateEnum == TripStates.toDepot ||
+        networkProvider.currentTrip.stateEnum == TripStates.onDepot) {
+      return "A disposición final";
+    } else {
+      return "";
+    }
+  }
+
   final globalKey = GlobalKey<ScaffoldState>();
   var isLoading = false;
   @override
@@ -98,15 +113,32 @@ class _DashboardState extends State<Dashboard> {
                       ),
                       Row(
                         children: [
-                          testNetworkManager.currentTrip.tripID != null
-                              ? Text(
-                                  testNetworkManager.currentObra.nombre,
-                                  style: TextStyle(fontSize: 24),
+                          testNetworkManager.currentTrip.tripID != null &&
+                                  testNetworkManager
+                                      .currentTrip.obras.isNotEmpty &&
+                                  testNetworkManager.currentObra != null
+                              ? Container(
+                                  width: mediaQuery.size.width * 0.6,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: Text(
+                                      testNetworkManager.currentObra.nombre,
+                                      style: TextStyle(fontSize: 24),
+                                    ),
+                                  ),
                                 )
-                              : Text(
-                                  "No ha iniciado viajes",
-                                  style: TextStyle(fontSize: 24),
-                                )
+                              : testNetworkManager.trips.isNotEmpty &&
+                                      testNetworkManager.currentTrip.obras !=
+                                          null
+                                  ? (Text(
+                                      testNetworkManager
+                                              .currentTrip.obras.isNotEmpty
+                                          ? "No ha iniciado viajes"
+                                          : noObraText(),
+                                      style: TextStyle(fontSize: 24),
+                                    ))
+                                  : Text("Sin viaje")
                         ],
                       )
                     ],
@@ -163,7 +195,10 @@ class _DashboardState extends State<Dashboard> {
           setState(() {
             isLoading = true;
           });
-          testNetworkManager.finishTrip().then((_) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Terminando viaje,puede tomar un momento'),
+          ));
+          testNetworkManager.finishTrip().whenComplete(() {
             setState(() {
               isLoading = false;
             });
@@ -201,8 +236,14 @@ class _DashboardState extends State<Dashboard> {
                 isReceptionAvaible = false;
                 return;
               } else {
-                Navigator.of(context)
-                    .pushNamed(ReceptionScreenGateway.routeName);
+                testNetworkManager.checkReception().then((isAvaible) {
+                  isAvaible
+                      ? Navigator.of(context)
+                          .pushNamed(ReceptionScreenGateway.routeName)
+                      : ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text("Distancia demasiado grande"),
+                        ));
+                });
               }
 
               // geoDataManager
@@ -356,17 +397,21 @@ class _DashboardState extends State<Dashboard> {
                 SizedBox(
                   height: mediaQuery.size.height * 0.0,
                 ),
-                testNetworkManager.currentTrip.stateEnum ==
-                            TripStates.toDepot ||
-                        testNetworkManager.currentTrip.stateEnum ==
-                            TripStates.onDepot
-                    ? finishTripButton
-                    : receptionButton,
-                SizedBox(
-                  height: mediaQuery.size.height * 0.03,
-                ),
-                currentTripCard,
-                SizedBox(height: mediaQuery.size.height * 0.05),
+                testNetworkManager.currentTrip.tripID != null
+                    ? (testNetworkManager.currentTrip.stateEnum ==
+                                TripStates.toDepot ||
+                            testNetworkManager.currentTrip.stateEnum ==
+                                TripStates.onDepot
+                        ? finishTripButton
+                        : receptionButton)
+                    : Container(),
+                if (testNetworkManager.trips.isNotEmpty)
+                  SizedBox(
+                    height: mediaQuery.size.height * 0.03,
+                  ),
+                if (testNetworkManager.trips.isNotEmpty) currentTripCard,
+                if (testNetworkManager.trips.isNotEmpty)
+                  SizedBox(height: mediaQuery.size.height * 0.05),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -382,6 +427,12 @@ class _DashboardState extends State<Dashboard> {
                         child: Text('Ver todos'))
                   ],
                 ),
+                if (testNetworkManager.trips.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(15.0),
+                    child: Text("No tiene más viajes por hoy",
+                        style: textStyle.headline6),
+                  ),
                 isLoading
                     ? Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -389,7 +440,8 @@ class _DashboardState extends State<Dashboard> {
                       )
                     : Container(
                         height: mediaQuery.size.height * 0.35,
-                        child: testNetworkManager.trips.isEmpty
+                        child: testNetworkManager.trips.isEmpty ||
+                                testNetworkManager.obras.isEmpty
                             ? Container()
                             : Column(children: <Widget>[
                                 for (var trip in trips)
@@ -401,7 +453,7 @@ class _DashboardState extends State<Dashboard> {
                                       mediaQuery: mediaQuery,
                                       textStyle: textStyle,
                                       destination: testNetworkManager
-                                          .fetchObraByID(trip.obras[0].id)
+                                          .fetchObraByID(trip.obras.first.id)
                                           .nombre,
                                       origin: 'Cosemar',
                                       time: DateFormat.jm()

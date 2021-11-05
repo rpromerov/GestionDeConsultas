@@ -1,20 +1,23 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:Cosemar/Widgets/CameraManager.dart';
 import 'package:Cosemar/Widgets/SignatureWidget.dart';
 import 'package:Cosemar/Widgets/loadingIndicator.dart';
+import 'package:Cosemar/main.dart';
+import 'package:Cosemar/model/equipment.dart';
 import 'package:Cosemar/providers/networkProvider.dart';
 import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:dart_rut_validator/dart_rut_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_signature_pad/flutter_signature_pad.dart';
 import 'package:provider/provider.dart';
+import 'package:searchable_dropdown/searchable_dropdown.dart';
 
 class ClientReceptionScreenCamera extends StatefulWidget {
   static const String routeName = "/ClientReceptionScreenCamera";
-  const ClientReceptionScreenCamera({Key key}) : super(key: key);
 
   @override
   _ClientReceptionScreenStateCamera createState() =>
@@ -23,21 +26,27 @@ class ClientReceptionScreenCamera extends StatefulWidget {
 
 class _ClientReceptionScreenStateCamera
     extends State<ClientReceptionScreenCamera> {
-  void showAlertDialog(
-    String message,
-    BuildContext context,
-  ) {
+  GlobalKey _scaffold = GlobalKey();
+  void showConfirmationDialog(BuildContext scaffoldContext) {
     final alert = AlertDialog(
+      title: Text("Recepción enviada correctamente"),
       actions: [
         TextButton(
-          onPressed: () =>
-              Navigator.of(context).pushReplacementNamed(Login.routeName),
           child: Text("Ok"),
+          onPressed: () {
+            GlobalNavigator.navigatorKey.currentState
+                .pushReplacementNamed(Login.routeName);
+          },
         )
       ],
-      title: Text("Recepcion iniciada correctamente"),
     );
-    showDialog(builder: (ctx) => alert, context: context);
+    showDialog(
+      barrierDismissible: false,
+      context: scaffoldContext,
+      builder: (ctx) {
+        return alert;
+      },
+    );
   }
 
   Map<String, String> _formInfo = Map();
@@ -48,10 +57,35 @@ class _ClientReceptionScreenStateCamera
     return true;
   }
 
+  Future<String> encodeImage() async {
+    final filePath = imagePath;
+    final byteData = await File(filePath).readAsBytes();
+    final base64EncodedImage = base64Encode(byteData);
+    return base64EncodedImage;
+  }
+
+  Future<void> sendClientReception(BuildContext ctx) async {
+    final network = Provider.of<NetworkProvider>(ctx, listen: false);
+    final encodedImage = await encodeImage();
+    network
+        .sendClientReception(
+            base64Firma: encodedImage,
+            nombre: _formInfo['name'],
+            rut: RUTValidator.deFormat(_formInfo['rut']),
+            observaciones: _formInfo['observacion'],
+            equipoRetiradoID: equipoARetirarID,
+            kgRetirados: _formInfo['kilos'])
+        .whenComplete(() {
+      showConfirmationDialog(ctx);
+    });
+  }
+
   String imagePath;
   Image picture;
   var showPicture = false;
   var isLoading = false;
+  var equipoARetirarID = '';
+  final rutController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     final networkManager = Provider.of<NetworkProvider>(context);
@@ -60,7 +94,6 @@ class _ClientReceptionScreenStateCamera
     final signatureWidget = Signature(
       key: _signatureKey,
     );
-    final scaffoldKey = GlobalKey<ScaffoldState>();
 
     final cameraWidgetState = GlobalKey<CameraWidgetState>();
 
@@ -97,27 +130,6 @@ class _ClientReceptionScreenStateCamera
       takePicture();
     }
 
-    Future<String> encodeImage() async {
-      final filePath = imagePath;
-      final byteData = await File(filePath).readAsBytes();
-      final base64EncodedImage = base64Encode(byteData);
-      return base64EncodedImage;
-    }
-
-    Future<void> sendClientReception(BuildContext ctx) async {
-      final network = Provider.of<NetworkProvider>(ctx, listen: false);
-      final encodedImage = await encodeImage();
-      network
-          .sendClientReception(
-              base64Firma: encodedImage,
-              nombre: _formInfo['name'],
-              rut: _formInfo['rut'],
-              observaciones: _formInfo['observacion'])
-          .then((_) {
-        Navigator.of(context).pushReplacementNamed(Login.routeName);
-      });
-    }
-
     var cameraStack = Container(
       height: size.height * 0.6,
       width: size.width * 0.6,
@@ -134,27 +146,38 @@ class _ClientReceptionScreenStateCamera
         Spacer(),
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: showPicture
-              ? ElevatedButton.icon(
-                  icon: Icon(Icons.replay),
-                  onPressed: () => retakePicture(),
-                  label: Text("Tomar otra foto"),
-                )
-              : ElevatedButton.icon(
-                  icon: Icon(Icons.camera_alt),
-                  onPressed: () => takePicture(),
-                  label: Text("Tomar foto"),
-                ),
+          child: SizedBox(
+            width: 175,
+            height: 50,
+            child: showPicture
+                ? ElevatedButton.icon(
+                    icon: Icon(Icons.replay),
+                    onPressed: () => retakePicture(),
+                    label: Text("Tomar otra foto",
+                        style: Theme.of(context).textTheme.button.copyWith(
+                              fontSize: 15,
+                              color: Colors.white,
+                            )),
+                  )
+                : ElevatedButton.icon(
+                    icon: Icon(Icons.camera_alt),
+                    onPressed: () => takePicture(),
+                    label: Text("Tomar foto",
+                        style: Theme.of(context).textTheme.button.copyWith(
+                              fontSize: 20,
+                              color: Colors.white,
+                            )),
+                  ),
+          ),
         ),
         Spacer()
       ],
     );
     var floatingButton = Container(
-      width: 125,
+      width: 100,
       height: 50,
       child: RaisedButton(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        color: Colors.green,
+        color: Colors.blueAccent,
         child: Padding(
           padding: const EdgeInsets.only(left: 0.0),
           child: Row(
@@ -175,33 +198,75 @@ class _ClientReceptionScreenStateCamera
           ),
         ),
         onPressed: () {
+          print("pressed");
+          if (isLoading) {
+            return;
+          }
+
           if (_formKey.currentState.validate()) {
             _formKey.currentState.save();
             if (picture == null) {
-              scaffoldKey.currentState.showSnackBar(SnackBar(
+              ScaffoldMessenger.of(_scaffold.currentContext)
+                  .showSnackBar(SnackBar(
                 content: Text("Debe haber tomado una foto"),
               ));
               return;
             }
-            setState(() {
-              isLoading = true;
-            });
-            sendClientReception(context).then((val) {
+
+            if (!isLoading) {
               setState(() {
-                isLoading = false;
+                this.isLoading = true;
               });
-            });
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Enviando,puede tomar un momento'),
+              ));
+              sendClientReception(context).whenComplete(() {
+                setState(() {
+                  this.isLoading = false;
+                });
+              });
+            }
           }
         },
       ),
     );
-    final rutController = TextEditingController();
+
     void onChangedApplyFormat(String text) {
       RUTValidator.formatFromTextController(rutController);
     }
 
+    final dropdown = SizedBox(
+        width: size.width * 0.9,
+        child: SearchableDropdown.single(
+          items: networkManager.currentTrip.obras[0].equiposParaRetiro
+              .map((equipo) {
+            return DropdownMenuItem(
+              onTap: () {
+                return;
+              },
+              value: equipo.equipmentID,
+              child: Text(
+                equipo.name,
+                style: TextStyle(fontSize: 20),
+              ),
+            );
+          }).toList(),
+          onChanged: (equipoARetirarID) {
+            this.equipoARetirarID = (equipoARetirarID as String);
+            print(this.equipoARetirarID);
+          },
+          hint: "Equipo no seleccionado",
+          isExpanded: true,
+          label: Text('Equipo a retirar'),
+          searchHint: Text("Seleccione el equipo a retirar"),
+          displayClearIcon: true,
+          onClear: () {
+            equipoARetirarID = '';
+          },
+        ));
+
     return Scaffold(
-      key: scaffoldKey,
+      key: _scaffold,
       appBar: AppBar(
         title: Text("Recepcion cliente"),
       ),
@@ -212,6 +277,26 @@ class _ClientReceptionScreenStateCamera
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  SizedBox(
+                    width: size.width,
+                    height: size.height * 0.1,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(child: cameraButton),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 20),
+                          child: SizedBox(
+                            width: 130,
+                            child: floatingButton,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
                   Form(
                     key: _formKey,
                     child: Column(
@@ -228,6 +313,7 @@ class _ClientReceptionScreenStateCamera
                           onSaved: (name) => _formInfo['name'] = name,
                         ),
                         TextFormField(
+                          controller: rutController,
                           decoration: const InputDecoration(
                               labelText: "RUT",
                               hintText: "RUT de quien recibe."),
@@ -236,22 +322,49 @@ class _ClientReceptionScreenStateCamera
                               RUTValidator(validationErrorText: "Rut no válido")
                                   .validator,
                           onSaved: (rut) => _formInfo['rut'] = rut,
+                          onChanged: onChangedApplyFormat,
                         ),
+                        if (networkManager.currentTrip.tipoViaje == 2)
+                          TextFormField(
+                            initialValue: "",
+                            decoration: const InputDecoration(
+                                labelText: "Kilogramos retirados",
+                                hintText:
+                                    "Cuantos Kg se retiraron del cliente."),
+                            textInputAction: TextInputAction.done,
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
+                            validator: (kg) => kg.isNotEmpty
+                                ? null
+                                : "Debe ingresar los kilogramos retirados",
+                            onSaved: (kg) => _formInfo['kilos'] = kg,
+                          ),
                         TextFormField(
                             validator: (value) => null,
                             decoration: const InputDecoration(
                               labelText: "Observaciones.",
                             ),
-                            textInputAction: TextInputAction.done,
+                            textInputAction:
+                                networkManager.currentTrip.tipoViaje == 2
+                                    ? TextInputAction.next
+                                    : TextInputAction.done,
                             onSaved: (observation) =>
                                 _formInfo['observacion'] = observation),
                       ],
                     ),
                   ),
                   SizedBox(
+                    height: 20,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      dropdown,
+                    ],
+                  ),
+                  SizedBox(
                     height: 30,
                   ),
-                  cameraButton,
                   cameraStack,
                   SizedBox(
                     height: size.height * 0.07,
@@ -263,8 +376,6 @@ class _ClientReceptionScreenStateCamera
           if (isLoading) LoadingIndicator(),
         ],
       ),
-      floatingActionButton: floatingButton,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }

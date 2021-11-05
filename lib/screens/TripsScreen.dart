@@ -47,6 +47,17 @@ class _TripsScreenState extends State<TripsScreen> {
     }
   }
 
+  String noObraText() {
+    final NetworkProvider networkProvider =
+        Provider.of<NetworkProvider>(context);
+    if (networkProvider.currentTrip.stateEnum == TripStates.deposing ||
+        networkProvider.currentTrip.stateEnum == TripStates.onLandfill) {
+      return "En camino al vertedero";
+    } else {
+      return "En camino a disposición final";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final NetworkProvider networkProvider =
@@ -88,7 +99,8 @@ class _TripsScreenState extends State<TripsScreen> {
                                 currentFilter = TripFilters.pending;
                                 filteredTrips = networkProvider.trips
                                     .where((trip) =>
-                                        trip.stateEnum == TripStates.pending)
+                                        trip.stateEnum == TripStates.pending ||
+                                        trip.stateEnum == TripStates.delayed)
                                     .toList();
                                 sortTrips();
                               });
@@ -151,9 +163,11 @@ class _TripsScreenState extends State<TripsScreen> {
                             child: TripItem(
                               isRead: false,
                               notificationState: trip.stateEnum,
-                              notificationText: networkProvider
-                                  .fetchObraByID(trip.obras[0].id)
-                                  .nombre,
+                              notificationText: trip.obras.isNotEmpty
+                                  ? networkProvider
+                                      .fetchObraByID(trip.obras[0].id)
+                                      .nombre
+                                  : noObraText(),
                               notificationTimestamp: DateFormat.jm()
                                   .format(trip.programmedArrivalTime),
                             ),
