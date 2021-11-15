@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'package:Cosemar/model/depot.dart';
 import 'package:Cosemar/model/equipment.dart';
 import 'package:Cosemar/model/obra.dart';
+import 'package:Cosemar/model/tarros.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
 import 'package:flutter/foundation.dart';
 
@@ -27,6 +28,7 @@ class Trip {
   Depot vertedero;
   Depot deposito;
   int tipoViaje;
+  Tarros tarros;
   TripStates get stateEnum {
     switch (tripState) {
       case 0:
@@ -82,5 +84,6 @@ class Trip {
       this.baseSalida,
       this.tipoViaje,
       this.vertedero,
+      this.tarros,
       this.deposito});
 }

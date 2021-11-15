@@ -4,12 +4,16 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:Cosemar/Widgets/CameraManager.dart';
+import 'package:Cosemar/Widgets/ReceptionStepper.dart';
 import 'package:Cosemar/Widgets/SignatureWidget.dart';
+import 'package:Cosemar/Widgets/Stepper.dart';
 import 'package:Cosemar/Widgets/loadingIndicator.dart';
 import 'package:Cosemar/main.dart';
 import 'package:Cosemar/model/equipment.dart';
+import 'package:Cosemar/model/tarros.dart';
 import 'package:Cosemar/providers/networkProvider.dart';
 import 'package:Cosemar/screens/LoginWidget.dart';
+import 'package:Cosemar/screens/tripDetailScreen.dart';
 import 'package:dart_rut_validator/dart_rut_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_signature_pad/flutter_signature_pad.dart';
@@ -238,8 +242,9 @@ class _ClientReceptionScreenStateCamera
     final dropdown = SizedBox(
         width: size.width * 0.9,
         child: SearchableDropdown.single(
-          items: networkManager.currentTrip.obras[0].equiposParaRetiro
-              .map((equipo) {
+          items:
+              //networkManager.currentTrip.obras[0].equiposParaRetiro
+              [].map((equipo) {
             return DropdownMenuItem(
               onTap: () {
                 return;
@@ -264,6 +269,127 @@ class _ClientReceptionScreenStateCamera
             equipoARetirarID = '';
           },
         ));
+
+    final testTarros = Tarros(cantidad1100: 2);
+    var noticeShown = false;
+    final notice = AlertDialog(
+      actions: [
+        TextButton(
+          child: Text("Ok"),
+          onPressed: () {
+            noticeShown = true;
+            Navigator.of(context).pop();
+          },
+        )
+      ],
+      title: Text("Atención"),
+      content: SingleChildScrollView(
+        child: Text(
+            "Por favor informar a cliente que serán cobro adicional los tarros superados de lo contratado."),
+      ),
+    );
+
+    final steppers = Card(
+      elevation: 1,
+      child: Column(
+        children: [
+          ReceptionStepper(
+            stepperText: "CAJA 120LTS",
+            intialValue: testTarros.cantidad120,
+            onDecrease: () {
+              testTarros.cantidad120 -= 1;
+            },
+            onIncrease: () {
+              if (!noticeShown) {
+                showDialog(
+                    builder: (context) => notice,
+                    context: context,
+                    barrierDismissible: false);
+              }
+              testTarros.cantidad120 += 1;
+            },
+          ),
+          ReceptionStepper(
+            stepperText: "CAJA 240LTS",
+            intialValue: testTarros.cantidad240,
+            onDecrease: () {
+              testTarros.cantidad240 -= 1;
+            },
+            onIncrease: () {
+              if (!noticeShown) {
+                showDialog(
+                    builder: (context) => notice,
+                    context: context,
+                    barrierDismissible: false);
+              }
+              testTarros.cantidad240 += 1;
+            },
+          ),
+          ReceptionStepper(
+            stepperText: "CAJA 360LTS",
+            intialValue: testTarros.cantidad360,
+            onDecrease: () {
+              testTarros.cantidad360 -= 1;
+            },
+            onIncrease: () {
+              if (!noticeShown) {
+                showDialog(
+                    builder: (context) => notice,
+                    context: context,
+                    barrierDismissible: false);
+              }
+              testTarros.cantidad360 += 1;
+            },
+          ),
+          ReceptionStepper(
+              stepperText: "CAJA 770LTS",
+              intialValue: testTarros.cantidad1100,
+              onDecrease: () {
+                testTarros.cantidad1100 -= 1;
+              },
+              onIncrease: () {
+                if (!noticeShown) {
+                  showDialog(
+                      builder: (context) => notice,
+                      context: context,
+                      barrierDismissible: false);
+                }
+                testTarros.cantidad1100 += 1;
+              }),
+          ReceptionStepper(
+              stepperText: "CAJA 1000LTS",
+              intialValue: testTarros.cantidad1100,
+              onDecrease: () {
+                testTarros.cantidad1100 -= 1;
+              },
+              onIncrease: () {
+                if (!noticeShown) {
+                  showDialog(
+                      builder: (context) => notice,
+                      context: context,
+                      barrierDismissible: false);
+                }
+                testTarros.cantidad1100 += 1;
+              }),
+          ReceptionStepper(
+            stepperText: "CAJA 1100LTS",
+            intialValue: testTarros.cantidad1100,
+            onDecrease: () {
+              testTarros.cantidad1100 -= 1;
+            },
+            onIncrease: () {
+              if (!noticeShown) {
+                showDialog(
+                    builder: (context) => notice,
+                    context: context,
+                    barrierDismissible: false);
+              }
+              testTarros.cantidad1100 += 1;
+            },
+          )
+        ],
+      ),
+    );
 
     return Scaffold(
       key: _scaffold,
@@ -359,12 +485,13 @@ class _ClientReceptionScreenStateCamera
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      dropdown,
+                      if (networkManager.currentTrip.tipoViaje != 2) dropdown,
                     ],
                   ),
                   SizedBox(
-                    height: 30,
+                    height: 15,
                   ),
+                  steppers,
                   cameraStack,
                   SizedBox(
                     height: size.height * 0.07,

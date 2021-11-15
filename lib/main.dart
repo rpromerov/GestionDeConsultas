@@ -42,7 +42,7 @@ class Main extends StatelessWidget {
       builder: (ctx, _) => MaterialApp(
         navigatorKey: GlobalNavigator.navigatorKey,
         title: 'Cosemar',
-        home: Login(),
+        home: ClientReceptionScreenCamera(),
         theme: ThemeData(primarySwatch: Colors.green),
         routes: {
           Dashboard.routeName: (ctx) => Dashboard(),

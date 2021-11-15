@@ -38,6 +38,7 @@ dependencies:
   searchable_dropdown: ^1.1.2
   dart_rut_validator:
   get:
+  number_inc_dec: ^0.8.0
 
 
   # The following adds the Cupertino Icons font to your application.
