@@ -24,7 +24,7 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  final geoDataManager = GeoDataManager();
+  var geoDataManager = GeoDataManager();
   var didSetup = false;
 
   var isReceptionAvaible = false;
@@ -38,6 +38,8 @@ class _DashboardState extends State<Dashboard> {
 
     if (!didSetup) {
       final testNetworkManager = Provider.of<NetworkProvider>(context);
+
+      geoDataManager = testNetworkManager.geoData;
       testNetworkManager.populateTrips().then((value) {
         didSetup = true;
         isLoading = false;
@@ -50,9 +52,11 @@ class _DashboardState extends State<Dashboard> {
         }
 
         if (testNetworkManager.currentTrip.tripID != null) {
-          testNetworkManager.checkReception().then((isAvaible) {
-            setState(() {
-              isReceptionAvaible = isAvaible;
+          testNetworkManager.fetchDistanceLimit().whenComplete(() {
+            testNetworkManager.checkReception().then((isAvaible) {
+              setState(() {
+                isReceptionAvaible = isAvaible;
+              });
             });
           });
         }
@@ -295,6 +299,9 @@ class _DashboardState extends State<Dashboard> {
                 return;
               }
               print(isReceptionAvaible);
+
+              print("geodata DL: ${geoDataManager.distanceLimit}");
+
               geoDataManager
                   .isReceptionAvaible(
                       testNetworkManager.currentTrip.stateEnum ==

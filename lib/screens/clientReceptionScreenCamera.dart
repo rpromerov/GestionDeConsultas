@@ -270,8 +270,7 @@ class _ClientReceptionScreenStateCamera
           },
         ));
 
-    final testTarros = Tarros(cantidad1100: 2);
-    var noticeShown = false;
+    var noticeShown = true;
     final notice = AlertDialog(
       actions: [
         TextButton(
@@ -294,97 +293,115 @@ class _ClientReceptionScreenStateCamera
       child: Column(
         children: [
           ReceptionStepper(
-            stepperText: "CAJA 120LTS",
-            intialValue: testTarros.cantidad120,
+            stepperText: "TARRO 120LTS",
+            intialValue: networkManager.currentTrip.obras[0].tarros.cantidad120,
             onDecrease: () {
-              testTarros.cantidad120 -= 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad120 -= 1;
             },
             onIncrease: () {
-              if (!noticeShown) {
+              if (!noticeShown &&
+                  networkManager.currentTrip.obras[0].tarros.cantidad120 >
+                      networkManager.currentTrip.obras[0].tarros.allowance120) {
                 showDialog(
                     builder: (context) => notice,
                     context: context,
                     barrierDismissible: false);
               }
-              testTarros.cantidad120 += 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad120 += 1;
             },
           ),
           ReceptionStepper(
-            stepperText: "CAJA 240LTS",
-            intialValue: testTarros.cantidad240,
+            stepperText: "TARRO 240LTS",
+            intialValue: networkManager.currentTrip.obras[0].tarros.cantidad240,
             onDecrease: () {
-              testTarros.cantidad240 -= 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad240 -= 1;
             },
             onIncrease: () {
-              if (!noticeShown) {
+              if (!noticeShown &&
+                  networkManager.currentTrip.obras[0].tarros.cantidad240 >
+                      networkManager.currentTrip.obras[0].tarros.allowance240) {
                 showDialog(
                     builder: (context) => notice,
                     context: context,
                     barrierDismissible: false);
               }
-              testTarros.cantidad240 += 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad240 += 1;
             },
           ),
           ReceptionStepper(
-            stepperText: "CAJA 360LTS",
-            intialValue: testTarros.cantidad360,
+            stepperText: "TARRO 360LTS",
+            intialValue: networkManager.currentTrip.obras[0].tarros.cantidad360,
             onDecrease: () {
-              testTarros.cantidad360 -= 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad360 -= 1;
             },
             onIncrease: () {
-              if (!noticeShown) {
+              if (!noticeShown &&
+                  networkManager.currentTrip.obras[0].tarros.cantidad360 >
+                      networkManager.currentTrip.obras[0].tarros.allowance360) {
                 showDialog(
                     builder: (context) => notice,
                     context: context,
                     barrierDismissible: false);
               }
-              testTarros.cantidad360 += 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad360 += 1;
             },
           ),
           ReceptionStepper(
-              stepperText: "CAJA 770LTS",
-              intialValue: testTarros.cantidad1100,
-              onDecrease: () {
-                testTarros.cantidad1100 -= 1;
-              },
-              onIncrease: () {
-                if (!noticeShown) {
-                  showDialog(
-                      builder: (context) => notice,
-                      context: context,
-                      barrierDismissible: false);
-                }
-                testTarros.cantidad1100 += 1;
-              }),
-          ReceptionStepper(
-              stepperText: "CAJA 1000LTS",
-              intialValue: testTarros.cantidad1100,
-              onDecrease: () {
-                testTarros.cantidad1100 -= 1;
-              },
-              onIncrease: () {
-                if (!noticeShown) {
-                  showDialog(
-                      builder: (context) => notice,
-                      context: context,
-                      barrierDismissible: false);
-                }
-                testTarros.cantidad1100 += 1;
-              }),
-          ReceptionStepper(
-            stepperText: "CAJA 1100LTS",
-            intialValue: testTarros.cantidad1100,
+            stepperText: "TARRO 770LTS",
+            intialValue: networkManager.currentTrip.obras[0].tarros.cantidad770,
             onDecrease: () {
-              testTarros.cantidad1100 -= 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad770 -= 1;
             },
             onIncrease: () {
-              if (!noticeShown) {
+              if (!noticeShown &&
+                  networkManager.currentTrip.obras[0].tarros.cantidad770 >
+                      networkManager.currentTrip.obras[0].tarros.allowance770) {
                 showDialog(
                     builder: (context) => notice,
                     context: context,
                     barrierDismissible: false);
               }
-              testTarros.cantidad1100 += 1;
+              networkManager.currentTrip.obras[0].tarros.cantidad770 += 1;
+            },
+          ),
+          ReceptionStepper(
+            stepperText: "TARRO 1000LTS",
+            intialValue:
+                networkManager.currentTrip.obras[0].tarros.cantidad1000,
+            onDecrease: () {
+              networkManager.currentTrip.obras[0].tarros.cantidad1000 -= 1;
+            },
+            onIncrease: () {
+              if (!noticeShown &&
+                  networkManager.currentTrip.obras[0].tarros.cantidad1000 >
+                      networkManager
+                          .currentTrip.obras[0].tarros.allowance1000) {
+                showDialog(
+                    builder: (context) => notice,
+                    context: context,
+                    barrierDismissible: false);
+              }
+              networkManager.currentTrip.obras[0].tarros.cantidad1000 += 1;
+            },
+          ),
+          ReceptionStepper(
+            stepperText: "TARRO 1100LTS",
+            intialValue:
+                networkManager.currentTrip.obras[0].tarros.cantidad1100,
+            onDecrease: () {
+              networkManager.currentTrip.obras[0].tarros.cantidad1100 -= 1;
+            },
+            onIncrease: () {
+              if (!noticeShown &&
+                  networkManager.currentTrip.obras[0].tarros.cantidad1100 >
+                      networkManager
+                          .currentTrip.obras[0].tarros.allowance1100) {
+                showDialog(
+                    builder: (context) => notice,
+                    context: context,
+                    barrierDismissible: false);
+              }
+              networkManager.currentTrip.obras[0].tarros.cantidad1100 += 1;
             },
           )
         ],
@@ -450,7 +467,7 @@ class _ClientReceptionScreenStateCamera
                           onSaved: (rut) => _formInfo['rut'] = rut,
                           onChanged: onChangedApplyFormat,
                         ),
-                        if (networkManager.currentTrip.tipoViaje == 2)
+                        if (networkManager.currentTrip.tipoViaje != 2)
                           TextFormField(
                             initialValue: "",
                             decoration: const InputDecoration(
@@ -489,10 +506,10 @@ class _ClientReceptionScreenStateCamera
                     ],
                   ),
                   SizedBox(
-                    height: 15,
+                    height: 10,
                   ),
-                  steppers,
-                  cameraStack,
+                  if (showPicture) cameraStack,
+                  if (networkManager.currentTrip.tipoViaje == 2) steppers,
                   SizedBox(
                     height: size.height * 0.07,
                   )

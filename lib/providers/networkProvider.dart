@@ -6,6 +6,7 @@ import 'package:Cosemar/model/equipment.dart';
 import 'package:Cosemar/model/geoDataManager.dart';
 import 'package:Cosemar/model/http_exception.dart';
 import 'package:Cosemar/model/obra.dart';
+import 'package:Cosemar/model/tarros.dart';
 import 'package:Cosemar/model/trip.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
 import 'package:flutter/material.dart';
@@ -77,7 +78,6 @@ class NetworkProvider with ChangeNotifier {
   }
 
   void backgroundUpdate() {
-    const distanceLimit = 850;
     Timer.periodic(Duration(minutes: 1), (timer) async {
       if (timer.tick % 5 == 0) updateTrips();
       print("fired timer");
@@ -103,7 +103,7 @@ class NetworkProvider with ChangeNotifier {
           case TripStates.onRoute:
             if (await geoData.getDistance(
                     currentObra.latitud, currentObra.longitud) <
-                distanceLimit) {
+                geoData.distanceLimit) {
               setTripToOnClient(currentTrip.tripID);
               currentTrip.tripState = TripStates.onClient.asInt;
               notifyListeners();
@@ -124,7 +124,7 @@ class NetworkProvider with ChangeNotifier {
                 "${currentTrip.latitudVertedero},${currentTrip.longitudVertedero}");
             if (await geoData.getDistance(currentTrip.latitudVertedero,
                     currentTrip.longitudVertedero) <
-                distanceLimit) {
+                geoData.distanceLimit) {
               this.setTripToOnLandfill(currentTrip.tripID);
               currentTrip.tripState = TripStates.onLandfill.asInt;
               notifyListeners();
@@ -133,7 +133,7 @@ class NetworkProvider with ChangeNotifier {
           case TripStates.toDepot:
             if (await geoData.getDistance(
                     currentTrip.latitudDepot, currentTrip.longitudDepot) <
-                distanceLimit) {
+                geoData.distanceLimit) {
               this.setTripToOnDepot(currentTrip.tripID);
               currentTrip.tripState = TripStates.onDepot.asInt;
               notifyListeners();
@@ -255,6 +255,7 @@ class NetworkProvider with ChangeNotifier {
         targetLat = currentTrip.obras[0].latitud;
         targetLon = currentTrip.obras[0].latitud;
     }
+    print("pre distanceLimit ${geoData.distanceLimit}");
 
     return await geoData.isReceptionAvaible(targetLat, targetLon);
   }
@@ -364,7 +365,7 @@ class NetworkProvider with ChangeNotifier {
         body: encodedState);
     currentTrip.tripState = currentTrip.obras.length == 1
         ? TripStates.deposing.asInt
-        : TripStates.onRoute;
+        : TripStates.onRoute.asInt;
     if (currentTrip.obras.length > 1) {
       currentTrip.obras.removeAt(0);
     }
@@ -399,6 +400,7 @@ class NetworkProvider with ChangeNotifier {
       String equipoRetiradoID,
       String kgRetirados}) async {
     final requestURL = "$serverIp/api/Recepcion/";
+
     final encodedState = jsonEncode({
       'IdViaje': currentTrip.tripID,
       'Recepcionado': "$nombre $rut",
@@ -407,7 +409,15 @@ class NetworkProvider with ChangeNotifier {
       'Firma': base64Firma,
       'idObra': currentTrip.obras[0].id,
       if (equipoRetiradoID.isNotEmpty) 'retiradoID': equipoRetiradoID,
-      if (currentTrip.tipoViaje == 2) 'kgRetirados': kgRetirados
+      if (currentTrip.tipoViaje == 2) 'kgRetirados': kgRetirados,
+      'Tarros': {
+        "t120": currentTrip.obras[0].tarros.cantidad120,
+        "t240": currentTrip.obras[0].tarros.cantidad240,
+        "t360": currentTrip.obras[0].tarros.cantidad360,
+        "t770": currentTrip.obras[0].tarros.cantidad770,
+        "t1000": currentTrip.obras[0].tarros.cantidad1000,
+        "t1100": currentTrip.obras[0].tarros.cantidad1100,
+      }
     });
     final response = await http
         .post(requestURL,
@@ -472,6 +482,28 @@ class NetworkProvider with ChangeNotifier {
     return formattedTime;
   }
 
+  Future<void> fetchDistanceLimit() async {
+    final obraURL = "$serverIp/api/configuracion/metros";
+    try {
+      final response = await http.get(obraURL, headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer $token"
+      });
+      print("response: ${response.statusCode}");
+      final decodedResponse = jsonDecode(response.body);
+      print("distanceResponse $decodedResponse");
+      int distanceLimit = decodedResponse['Metros']['MetrosPermitidos'];
+      if (response.statusCode != 200) {
+        geoData.distanceLimit = 850;
+      } else {
+        geoData.distanceLimit = distanceLimit;
+      }
+    } catch (e) {
+      geoData.distanceLimit = 850;
+    }
+  }
+
   Future<Obra> fetchObra(String obraID) async {
     final obraURL = "$serverIp/api/Obra/$obraID";
     final response = await http.get(obraURL, headers: {
@@ -494,6 +526,39 @@ class NetworkProvider with ChangeNotifier {
     return obras[id];
   }
 
+  Future<Tarros> fetchTarros(String idServicio) async {
+    final obraURL = "$serverIp/api/servicio/tarrosServicio/$idServicio";
+    final response = await http.get(obraURL, headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token"
+    });
+    print("tarros: serviceid $idServicio");
+    print("tarros: ${response.statusCode}");
+    if (response.statusCode != 200) {
+      return Tarros();
+    }
+    var decodedResponse = jsonDecode(response.body);
+    print("tarros: $decodedResponse");
+
+    var decodedTarros = Tarros(
+      allowance120: decodedResponse['c120'],
+      cantidad120: decodedResponse['t120'],
+      allowance240: decodedResponse['c240'],
+      cantidad240: decodedResponse['t240'],
+      allowance360: decodedResponse['c360'],
+      cantidad360: decodedResponse['t360'],
+      allowance770: decodedResponse['c770'],
+      cantidad770: decodedResponse['t770'],
+      allowance1000: decodedResponse['c1000'],
+      cantidad1000: decodedResponse['t1000'],
+      allowance1100: decodedResponse['c1100'],
+      cantidad1100: decodedResponse['t1100'],
+    );
+
+    return decodedTarros;
+  }
+
   Future<List<Equipment>> fetchEquiposParaRetiro(String obraID) async {
     final obraURL = "$serverIp/api/equipoRetiro/$obraID";
     final response = await http.get(obraURL, headers: {
@@ -504,7 +569,6 @@ class NetworkProvider with ChangeNotifier {
     if (response.statusCode != 200) {
       return [];
     }
-    print("status ${response.statusCode}, body ${response.body}");
     var decodedResponse = jsonDecode(response.body);
 
     var decodedResponseList = List.from(decodedResponse);
@@ -580,6 +644,7 @@ class NetworkProvider with ChangeNotifier {
 
           parsedObras.add(Obra(
               equiposParaRetiro: await fetchEquiposParaRetiro(obra['idObra']),
+              tarros: await fetchTarros(fullObra['idServicio']),
               comuna: obra['comuna'],
               direccion: obra['direccion'],
               latitud: obra['latitud'],
@@ -613,7 +678,6 @@ class NetworkProvider with ChangeNotifier {
             encargado: encodedDeposito['encargado'],
             telephone: encodedDeposito['telefono'],
             comuna: encodedDeposito['comuna']);
-        print(trip['tipoViaje']);
 
         trips.add(
           Trip(

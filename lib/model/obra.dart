@@ -1,4 +1,5 @@
 import 'package:Cosemar/model/equipment.dart';
+import 'package:Cosemar/model/tarros.dart';
 
 class Obra {
   String nombre;
@@ -9,11 +10,13 @@ class Obra {
   String nombreEncargado;
   String telefono;
   String id;
+  Tarros tarros;
   List<Equipment> equiposParaRetiro = [];
 
   Obra(
       {this.nombre,
       this.comuna,
+      this.tarros,
       this.direccion,
       this.latitud,
       this.longitud,

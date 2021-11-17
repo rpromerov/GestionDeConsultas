@@ -28,7 +28,6 @@ class Trip {
   Depot vertedero;
   Depot deposito;
   int tipoViaje;
-  Tarros tarros;
   TripStates get stateEnum {
     switch (tripState) {
       case 0:
@@ -84,6 +83,5 @@ class Trip {
       this.baseSalida,
       this.tipoViaje,
       this.vertedero,
-      this.tarros,
       this.deposito});
 }

@@ -9,11 +9,14 @@ class GeoDataManager {
   /// When the location services are not enabled or permissions
   /// are denied the `Future` will return an error.
   ///
+  ///
+  int distanceLimit = 0;
+  GeoDataManager({this.distanceLimit = 850});
   Future<bool> isReceptionAvaible(double latitud, double longitud) async {
     var distancia = await getDistance(latitud, longitud);
     print("latitud $latitud,longitud $longitud");
-    print(distancia);
-    if (await getDistance(latitud, longitud) <= 850) {
+    print("distanceLimit: $distanceLimit");
+    if (distancia <= distanceLimit && distanceLimit != 0) {
       return true;
     } else {
       return false;
