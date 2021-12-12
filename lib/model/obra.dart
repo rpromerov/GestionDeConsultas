@@ -12,6 +12,8 @@ class Obra {
   String id;
   Tarros tarros;
   List<Equipment> equiposParaRetiro = [];
+  int onServerIndex;
+  String idServicio;
 
   Obra(
       {this.nombre,
@@ -23,7 +25,9 @@ class Obra {
       this.nombreEncargado,
       this.telefono,
       this.id,
-      this.equiposParaRetiro});
+      this.equiposParaRetiro,
+      this.onServerIndex,
+      this.idServicio});
 
   @override
   String toString() {

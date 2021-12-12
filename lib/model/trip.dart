@@ -28,6 +28,7 @@ class Trip {
   Depot vertedero;
   Depot deposito;
   int tipoViaje;
+  bool isObraReorderEnabled = false;
   TripStates get stateEnum {
     switch (tripState) {
       case 0:
@@ -83,5 +84,6 @@ class Trip {
       this.baseSalida,
       this.tipoViaje,
       this.vertedero,
-      this.deposito});
+      this.deposito,
+      this.isObraReorderEnabled});
 }

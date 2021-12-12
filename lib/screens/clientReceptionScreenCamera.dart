@@ -16,6 +16,7 @@ import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:Cosemar/screens/tripDetailScreen.dart';
 import 'package:dart_rut_validator/dart_rut_validator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_signature_pad/flutter_signature_pad.dart';
 import 'package:provider/provider.dart';
 import 'package:searchable_dropdown/searchable_dropdown.dart';
@@ -64,7 +65,9 @@ class _ClientReceptionScreenStateCamera
   Future<String> encodeImage() async {
     final filePath = imagePath;
     final byteData = await File(filePath).readAsBytes();
-    final base64EncodedImage = base64Encode(byteData);
+    final compressedData =
+        await FlutterImageCompress.compressWithList(byteData, quality: 60);
+    final base64EncodedImage = base64Encode(compressedData);
     return base64EncodedImage;
   }
 
@@ -206,6 +209,7 @@ class _ClientReceptionScreenStateCamera
           if (isLoading) {
             return;
           }
+          print("passed");
 
           if (_formKey.currentState.validate()) {
             _formKey.currentState.save();
@@ -224,11 +228,8 @@ class _ClientReceptionScreenStateCamera
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text('Enviando,puede tomar un momento'),
               ));
-              sendClientReception(context).whenComplete(() {
-                setState(() {
-                  this.isLoading = false;
-                });
-              });
+              print("sending");
+              sendClientReception(context).whenComplete(() {});
             }
           }
         },

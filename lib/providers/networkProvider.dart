@@ -10,6 +10,7 @@ import 'package:Cosemar/model/tarros.dart';
 import 'package:Cosemar/model/trip.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -253,26 +254,27 @@ class NetworkProvider with ChangeNotifier {
         break;
       default:
         targetLat = currentTrip.obras[0].latitud;
-        targetLon = currentTrip.obras[0].latitud;
+        targetLon = currentTrip.obras[0].longitud;
     }
-    print("pre distanceLimit ${geoData.distanceLimit}");
 
     return await geoData.isReceptionAvaible(targetLat, targetLon);
   }
 
   Future<void> changeState(String tripID, TripStates state) async {
     final requestURL = "$getServerIp/api/Viaje/$tripID";
-    print(avaibleEquipments);
+
     var equipment = Equipment(equipmentID: '', name: "Sin equipo");
     var nextTrip = trips.firstWhere((e) {
       return e.tripID == tripID;
     });
+    print(nextTrip.avaibleEquipment);
     print("nextID ${nextTrip.equipment.equipmentID}");
-    if (avaibleEquipments.isNotEmpty && nextTrip.equipmentID != null) {
-      equipment = avaibleEquipments.firstWhere((test) {
-        print(test.equipmentID);
+    if (nextTrip.avaibleEquipment.isNotEmpty && nextTrip.equipmentID != null) {
+      equipment = nextTrip.avaibleEquipment.firstWhere((test) {
+        print(test.equipmentID == nextTrip.equipment.equipmentID);
         return test.equipmentID == nextTrip.equipmentID;
       });
+      print(equipment);
     }
 
     final encodedState = jsonEncode({
@@ -490,17 +492,15 @@ class NetworkProvider with ChangeNotifier {
         "Accept": "application/json",
         "Authorization": "Bearer $token"
       });
-      print("response: ${response.statusCode}");
       final decodedResponse = jsonDecode(response.body);
-      print("distanceResponse $decodedResponse");
-      int distanceLimit = decodedResponse['Metros']['MetrosPermitidos'];
       if (response.statusCode != 200) {
-        geoData.distanceLimit = 850;
+        geoData.distanceLimit = 1500;
       } else {
-        geoData.distanceLimit = distanceLimit;
+        geoData.distanceLimit = decodedResponse['metrosPermitidos'];
+        checkReception();
       }
     } catch (e) {
-      geoData.distanceLimit = 850;
+      geoData.distanceLimit = 1500;
     }
   }
 
@@ -533,13 +533,10 @@ class NetworkProvider with ChangeNotifier {
       "Accept": "application/json",
       "Authorization": "Bearer $token"
     });
-    print("tarros: serviceid $idServicio");
-    print("tarros: ${response.statusCode}");
     if (response.statusCode != 200) {
       return Tarros();
     }
     var decodedResponse = jsonDecode(response.body);
-    print("tarros: $decodedResponse");
 
     var decodedTarros = Tarros(
       allowance120: decodedResponse['c120'],
@@ -580,6 +577,29 @@ class NetworkProvider with ChangeNotifier {
     return decodedEquipos;
   }
 
+  Future<void> updateObraIndex() async {
+    final tripsURL = "$serverIp/api/Viaje/${currentTrip.tripID}";
+    try {
+      var encoded = Map<String, int>();
+      for (int i = 0; i < currentTrip.obras.length; i++) {
+        encoded[currentTrip.obras[i].idServicio] =
+            currentTrip.obras[i].onServerIndex;
+      }
+      var encode = jsonEncode({
+        'ListaServicio': encoded,
+      });
+      print(encode);
+      final response = await http.put(tripsURL, body: encode, headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer $token"
+      });
+      print(response.statusCode);
+    } catch (e) {
+      print(e);
+    }
+  }
+
   Future<void> updateTrips() async {
     final tripsURL = "$serverIp/api/Viaje/ViajesChoferNuevo/$_driverID";
     try {
@@ -608,13 +628,12 @@ class NetworkProvider with ChangeNotifier {
         "Accept": "application/json",
         "Authorization": "Bearer $token"
       });
-      print(response.statusCode);
+      print(response.body);
       if (response.statusCode == 404 || response.statusCode == 400) {
         throw HttpException(errorMessage(response.statusCode));
       }
       final responseData = jsonDecode(response.body);
       for (var trip in responseData) {
-        print(trip);
         var equipments = await fetchEquipments(trip['idViaje']);
         avaibleEquipments = equipments;
         var tripEquipmentIsNotAvaible = avaibleEquipments.indexWhere((test) {
@@ -625,7 +644,7 @@ class NetworkProvider with ChangeNotifier {
             }) ==
             -1;
 
-        if (tripEquipmentIsNotAvaible) {
+        if (tripEquipmentIsNotAvaible && trip['tipoViaje'] != 2) {
           avaibleEquipments.add(Equipment(
               equipmentID: trip['equipamiento']['idEquipamiento'],
               name: trip['equipamiento']['nombre']));
@@ -635,26 +654,31 @@ class NetworkProvider with ChangeNotifier {
         });
 
         var codedObras = List.from(trip['servicioObra']);
-        List<dynamic> codedObrasLink = codedObras;
 
         var parsedObras = <Obra>[];
-        for (var fullObra in codedObras) {
-          print(fullObra['obra']);
-          var obra = fullObra['obra'];
+        print(codedObras);
+        if (codedObras.isNotEmpty) {
+          for (var fullObra in codedObras) {
+            print(fullObra['orden']);
+            var obra = fullObra['obra'];
 
-          parsedObras.add(Obra(
-              equiposParaRetiro: await fetchEquiposParaRetiro(obra['idObra']),
-              tarros: await fetchTarros(fullObra['idServicio']),
-              comuna: obra['comuna'],
-              direccion: obra['direccion'],
-              latitud: obra['latitud'],
-              longitud: obra['longuitud'],
-              nombre: obra['nombre'],
-              nombreEncargado: obra['encargado'],
-              telefono: obra['telefono'],
-              id: obra['idObra']));
+            parsedObras.add(Obra(
+                equiposParaRetiro: await fetchEquiposParaRetiro(obra['idObra']),
+                tarros: await fetchTarros(fullObra['idServicio']),
+                comuna: obra['comuna'],
+                direccion: obra['direccion'],
+                latitud: obra['latitud'],
+                longitud: obra['longuitud'],
+                nombre: obra['nombre'],
+                idServicio: fullObra['idServicio'],
+                nombreEncargado: obra['encargado'],
+                onServerIndex:
+                    fullObra['orden'] != null ? fullObra['orden'] : -1,
+                telefono: obra['telefono'],
+                id: obra['idObra']));
+          }
         }
-        print("trip add  ${trip['equipamiento']}");
+
         var encodedBaseSalida = trip['baseSalida'];
         var encodedVertedero = trip['disposicion'];
         var encodedDeposito = trip['bodega'];
@@ -690,6 +714,9 @@ class NetworkProvider with ChangeNotifier {
               // tripState: 0,
               avaibleEquipment: equipments,
               tipoViaje: trip['tipoViaje'],
+              isObraReorderEnabled: trip['tipoViaje'] == 2 &&
+                  parsedObras.isNotEmpty &&
+                  parsedObras.first.onServerIndex != -1,
               equipment: currentEquipmentIndex == -1
                   ? Equipment(name: "Sin Equipo", equipmentID: "")
                   : equipments[currentEquipmentIndex],
@@ -706,9 +733,11 @@ class NetworkProvider with ChangeNotifier {
               vertedero: vertedero),
         );
         print(trip['servicioObra']);
-        for (var obra in parsedObras) {
-          if (!obras.containsKey(obra.id)) {
-            obras[obra.id] = obra;
+        if (parsedObras.isNotEmpty) {
+          for (var obra in parsedObras) {
+            if (!obras.containsKey(obra.id)) {
+              obras[obra.id] = obra;
+            }
           }
         }
 

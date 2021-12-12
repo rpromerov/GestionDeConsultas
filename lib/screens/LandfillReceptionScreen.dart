@@ -8,6 +8,7 @@ import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
@@ -86,7 +87,10 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
   Future<String> encodeImage() async {
     final filePath = imagePath;
     final byteData = await File(filePath).readAsBytes();
-    final base64EncodedImage = base64Encode(byteData);
+
+    final compressedImage =
+        await FlutterImageCompress.compressWithList(byteData, quality: 60);
+    final base64EncodedImage = base64Encode(compressedImage);
     return base64EncodedImage;
   }
 
@@ -153,11 +157,7 @@ class _LandfillReceptionScreenState extends State<LandfillReceptionScreen> {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text('Enviando,puede tomar un momento'),
               ));
-              sendLandfillReception(context).whenComplete(() {
-                setState(() {
-                  isLoading = false;
-                });
-              });
+              sendLandfillReception(context).whenComplete(() {});
             }
           }
         },

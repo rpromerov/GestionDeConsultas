@@ -5,6 +5,7 @@ import 'package:Cosemar/model/trip.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
 import 'package:Cosemar/providers/networkProvider.dart';
 import 'package:Cosemar/screens/LoginWidget.dart';
+import 'package:Cosemar/screens/ObraListScreen.dart';
 import 'package:Cosemar/screens/ReceptionScreen.dart';
 import 'package:Cosemar/screens/TripsScreen.dart';
 import 'package:Cosemar/screens/notificationScreen.dart';
@@ -55,6 +56,7 @@ class _DashboardState extends State<Dashboard> {
           testNetworkManager.fetchDistanceLimit().whenComplete(() {
             testNetworkManager.checkReception().then((isAvaible) {
               setState(() {
+                print("is avaible $isAvaible");
                 isReceptionAvaible = isAvaible;
               });
             });
@@ -227,6 +229,30 @@ class _DashboardState extends State<Dashboard> {
       ),
     );
 
+    var reorderButton = ElevatedButton(
+      style: ElevatedButton.styleFrom(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+      child: Container(
+        padding: EdgeInsets.all(10),
+        height: mediaQuery.size.height * 0.1,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Reordenar obras',
+              style:
+                  textStyle.button.copyWith(fontSize: 20, color: Colors.white),
+            ),
+            Icon(Icons.arrow_forward, size: 25, color: Colors.white),
+          ],
+        ),
+      ),
+      onPressed: () {
+        Navigator.of(context).pushNamed(ObraListScreen.routeName);
+      },
+    );
+
     var receptionButton = testNetworkManager.currentTrip.stateEnum ==
             TripStates.deposing
         ? RaisedButton(
@@ -278,7 +304,10 @@ class _DashboardState extends State<Dashboard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Realizar recepción',
+                    testNetworkManager.currentTrip.stateEnum ==
+                            TripStates.onLandfill
+                        ? 'Recepción Vertedero'
+                        : 'Realizar recepción',
                     style: textStyle.button
                         .copyWith(fontSize: 20, color: Colors.white),
                   ),
@@ -396,80 +425,88 @@ class _DashboardState extends State<Dashboard> {
       ),
       body: Stack(
         children: [
-          Container(
-            padding: EdgeInsets.all(15),
-            child: Column(
-              children: [
-                //greetingCard,
-                SizedBox(
-                  height: mediaQuery.size.height * 0.0,
-                ),
-                testNetworkManager.currentTrip.tripID != null
-                    ? (testNetworkManager.currentTrip.stateEnum ==
-                                TripStates.toDepot ||
-                            testNetworkManager.currentTrip.stateEnum ==
-                                TripStates.onDepot
-                        ? finishTripButton
-                        : receptionButton)
-                    : Container(),
-                if (testNetworkManager.trips.isNotEmpty)
+          SingleChildScrollView(
+            child: Container(
+              padding: EdgeInsets.all(15),
+              child: Column(
+                children: [
+                  //greetingCard,
                   SizedBox(
-                    height: mediaQuery.size.height * 0.03,
+                    height: mediaQuery.size.height * 0.0,
                   ),
-                if (testNetworkManager.trips.isNotEmpty) currentTripCard,
-                if (testNetworkManager.trips.isNotEmpty)
-                  SizedBox(height: mediaQuery.size.height * 0.05),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Proximos Viajes',
-                      style: textStyle.headline6,
+                  testNetworkManager.currentTrip.tripID != null
+                      ? (testNetworkManager.currentTrip.stateEnum ==
+                                  TripStates.toDepot ||
+                              testNetworkManager.currentTrip.stateEnum ==
+                                  TripStates.onDepot
+                          ? finishTripButton
+                          : receptionButton)
+                      : Container(),
+                  if (testNetworkManager.trips.isNotEmpty)
+                    SizedBox(
+                      height: mediaQuery.size.height * 0.03,
                     ),
-                    OutlineButton(
-                        onPressed: () {
-                          Navigator.of(context)
-                              .pushNamed(TripsScreen.routeName);
-                        },
-                        child: Text('Ver todos'))
-                  ],
-                ),
-                if (testNetworkManager.trips.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(15.0),
-                    child: Text("No tiene más viajes por hoy",
-                        style: textStyle.headline6),
+                  if (testNetworkManager.trips.isNotEmpty) currentTripCard,
+
+                  if (testNetworkManager.currentTrip != null &&
+                      testNetworkManager.currentTrip.isObraReorderEnabled !=
+                          null)
+                    if (testNetworkManager.currentTrip.isObraReorderEnabled)
+                      reorderButton,
+                  if (testNetworkManager.trips.isNotEmpty)
+                    SizedBox(height: mediaQuery.size.height * 0.05),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Proximos Viajes',
+                        style: textStyle.headline6,
+                      ),
+                      OutlineButton(
+                          onPressed: () {
+                            Navigator.of(context)
+                                .pushNamed(TripsScreen.routeName);
+                          },
+                          child: Text('Ver todos'))
+                    ],
                   ),
-                isLoading
-                    ? Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      )
-                    : Container(
-                        height: mediaQuery.size.height * 0.35,
-                        child: testNetworkManager.trips.isEmpty ||
-                                testNetworkManager.obras.isEmpty
-                            ? Container()
-                            : Column(children: <Widget>[
-                                for (var trip in trips)
-                                  GestureDetector(
-                                    onTap: () => Navigator.pushNamed(
-                                        context, TripDetailScreen.routeName,
-                                        arguments: trip),
-                                    child: NextTripCard(
-                                      mediaQuery: mediaQuery,
-                                      textStyle: textStyle,
-                                      destination: testNetworkManager
-                                          .fetchObraByID(trip.obras.first.id)
-                                          .nombre,
-                                      origin: 'Cosemar',
-                                      time: DateFormat.jm()
-                                          .format(trip.programmedArrivalTime),
-                                      state: trip.stateEnum,
+                  if (testNetworkManager.trips.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: Text("No tiene más viajes por hoy",
+                          style: textStyle.headline6),
+                    ),
+                  isLoading
+                      ? Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
+                        )
+                      : Container(
+                          height: mediaQuery.size.height * 0.35,
+                          child: testNetworkManager.trips.isEmpty ||
+                                  testNetworkManager.obras.isEmpty
+                              ? Container()
+                              : Column(children: <Widget>[
+                                  for (var trip in trips)
+                                    GestureDetector(
+                                      onTap: () => Navigator.pushNamed(
+                                          context, TripDetailScreen.routeName,
+                                          arguments: trip),
+                                      child: NextTripCard(
+                                        mediaQuery: mediaQuery,
+                                        textStyle: textStyle,
+                                        destination: testNetworkManager
+                                            .fetchObraByID(trip.obras.first.id)
+                                            .nombre,
+                                        origin: 'Cosemar',
+                                        time: DateFormat.jm()
+                                            .format(trip.programmedArrivalTime),
+                                        state: trip.stateEnum,
+                                      ),
                                     ),
-                                  ),
-                              ]))
-              ],
+                                ]))
+                ],
+              ),
             ),
           ),
           if (isLoading) LoadingIndicator()

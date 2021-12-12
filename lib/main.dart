@@ -5,6 +5,7 @@ import 'package:Cosemar/screens/CancelTripScreen.dart';
 import 'package:Cosemar/screens/Dashboard.dart';
 import 'package:Cosemar/screens/LandfillReceptionScreen.dart';
 import 'package:Cosemar/screens/NotificationScreen.dart';
+import 'package:Cosemar/screens/ObraListScreen.dart';
 import 'package:Cosemar/screens/ReceptionScreen.dart';
 import 'package:Cosemar/screens/TripsScreen.dart';
 import 'package:Cosemar/screens/clientReceptionScreen.dart';
@@ -54,7 +55,8 @@ class Main extends StatelessWidget {
           CancelTripScreen.routeName: (ctx) => CancelTripScreen(),
           ReceptionScreenGateway.routeName: (ctx) => ReceptionScreenGateway(),
           ClientReceptionScreenCamera.routeName: (ctx) =>
-              ClientReceptionScreen()
+              ClientReceptionScreen(),
+          ObraListScreen.routeName: (ctx) => ObraListScreen()
         },
       ),
     );

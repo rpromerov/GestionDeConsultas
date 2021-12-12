@@ -14,13 +14,16 @@ class GeoDataManager {
   GeoDataManager({this.distanceLimit = 850});
   Future<bool> isReceptionAvaible(double latitud, double longitud) async {
     var distancia = await getDistance(latitud, longitud);
-    print("latitud $latitud,longitud $longitud");
-    print("distanceLimit: $distanceLimit");
+    print("$latitud,$longitud");
     if (distancia <= distanceLimit && distanceLimit != 0) {
       return true;
     } else {
       return false;
     }
+  }
+
+  void setDistanceLimit(int limit) {
+    this.distanceLimit = limit;
   }
 
   Future<Position> _determinePosition() async {
@@ -61,7 +64,6 @@ class GeoDataManager {
   }
 
   Future<double> getDistance(double latitud, longitud) async {
-    print(latitud);
     if (latitud == null || longitud == null) {
       return double.infinity;
     }
@@ -69,7 +71,7 @@ class GeoDataManager {
 
     final currentDistance = Geolocator.distanceBetween(
         currentPosition.latitude, currentPosition.longitude, latitud, longitud);
-    print("distancia $currentDistance ");
+
     return currentDistance;
   }
 }
