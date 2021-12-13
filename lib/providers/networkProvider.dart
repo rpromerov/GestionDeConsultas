@@ -82,6 +82,7 @@ class NetworkProvider with ChangeNotifier {
     Timer.periodic(Duration(minutes: 1), (timer) async {
       if (timer.tick % 5 == 0) updateTrips();
       print("fired timer");
+      checkReception();
       if (currentTrip == null) {
         final trip = trips.firstWhere((trip) {
           return trip.stateEnum == TripStates.pending ||
@@ -267,14 +268,11 @@ class NetworkProvider with ChangeNotifier {
     var nextTrip = trips.firstWhere((e) {
       return e.tripID == tripID;
     });
-    print(nextTrip.avaibleEquipment);
-    print("nextID ${nextTrip.equipment.equipmentID}");
     if (nextTrip.avaibleEquipment.isNotEmpty && nextTrip.equipmentID != null) {
       equipment = nextTrip.avaibleEquipment.firstWhere((test) {
         print(test.equipmentID == nextTrip.equipment.equipmentID);
         return test.equipmentID == nextTrip.equipmentID;
       });
-      print(equipment);
     }
 
     final encodedState = jsonEncode({
@@ -580,21 +578,23 @@ class NetworkProvider with ChangeNotifier {
   Future<void> updateObraIndex() async {
     final tripsURL = "$serverIp/api/Viaje/${currentTrip.tripID}";
     try {
-      var encoded = Map<String, int>();
+      var encoded = "[";
       for (int i = 0; i < currentTrip.obras.length; i++) {
-        encoded[currentTrip.obras[i].idServicio] =
-            currentTrip.obras[i].onServerIndex;
+        final encodedOrder =
+            '{"orden":${currentTrip.obras[i].onServerIndex},"idServicio":"${currentTrip.obras[i].idServicio}"}';
+        encoded += encodedOrder;
+        if (i != currentTrip.obras.length - 1) {
+          encoded += ",";
+        }
       }
-      var encode = jsonEncode({
-        'ListaServicio': encoded,
-      });
-      print(encode);
-      final response = await http.put(tripsURL, body: encode, headers: {
+      encoded += "]";
+
+      var encodedString = '{"ListaServicios":$encoded}';
+      final response = await http.put(tripsURL, body: encodedString, headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
         "Authorization": "Bearer $token"
       });
-      print(response.statusCode);
     } catch (e) {
       print(e);
     }
@@ -628,7 +628,6 @@ class NetworkProvider with ChangeNotifier {
         "Accept": "application/json",
         "Authorization": "Bearer $token"
       });
-      print(response.body);
       if (response.statusCode == 404 || response.statusCode == 400) {
         throw HttpException(errorMessage(response.statusCode));
       }
@@ -656,15 +655,17 @@ class NetworkProvider with ChangeNotifier {
         var codedObras = List.from(trip['servicioObra']);
 
         var parsedObras = <Obra>[];
-        print(codedObras);
         if (codedObras.isNotEmpty) {
           for (var fullObra in codedObras) {
-            print(fullObra['orden']);
             var obra = fullObra['obra'];
 
             parsedObras.add(Obra(
-                equiposParaRetiro: await fetchEquiposParaRetiro(obra['idObra']),
-                tarros: await fetchTarros(fullObra['idServicio']),
+                equiposParaRetiro: trip['tipoViaje'] != 2
+                    ? await fetchEquiposParaRetiro(obra['idObra'])
+                    : [],
+                tarros: trip['tipoViaje'] == 2
+                    ? await fetchTarros(fullObra['idServicio'])
+                    : [],
                 comuna: obra['comuna'],
                 direccion: obra['direccion'],
                 latitud: obra['latitud'],
@@ -732,7 +733,6 @@ class NetworkProvider with ChangeNotifier {
               longitudDepot: trip['bodega']['longuitud'],
               vertedero: vertedero),
         );
-        print(trip['servicioObra']);
         if (parsedObras.isNotEmpty) {
           for (var obra in parsedObras) {
             if (!obras.containsKey(obra.id)) {
@@ -743,7 +743,6 @@ class NetworkProvider with ChangeNotifier {
 
         if (!depots.containsKey(trip['bodega']['idBaseSalida'])) {
           final bodega = trip['bodega'];
-          print("Bodega: ${bodega['nombre']}");
           final newDepot = Depot(
               depotId: bodega['idBaseSalida'],
               name: bodega['nombre'],
@@ -882,7 +881,6 @@ class NetworkProvider with ChangeNotifier {
           notifyListeners();
           saveData();
         } else {
-          print(statusCode);
           throw HttpException(errorMessage(statusCode));
         }
 

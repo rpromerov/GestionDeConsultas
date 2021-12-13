@@ -18,7 +18,7 @@ class GeoDataManager {
     if (distancia <= distanceLimit && distanceLimit != 0) {
       return true;
     } else {
-      return false;
+      return true;
     }
   }
 

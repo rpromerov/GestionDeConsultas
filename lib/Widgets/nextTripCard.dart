@@ -6,6 +6,7 @@ class NextTripCard extends StatelessWidget {
   final String origin;
   final String destination;
   final String time;
+  final int tripType;
   const NextTripCard(
       {Key key,
       @required this.mediaQuery,
@@ -13,7 +14,8 @@ class NextTripCard extends StatelessWidget {
       @required this.destination,
       @required this.origin,
       @required this.time,
-      @required this.state})
+      @required this.state,
+      @required this.tripType})
       : super(key: key);
 
   final MediaQueryData mediaQuery;
@@ -49,7 +51,7 @@ class NextTripCard extends StatelessWidget {
           ),
           Container(
             padding: EdgeInsets.only(left: 0, right: 15, top: 15, bottom: 15),
-            height: mediaQuery.size.height * 0.10,
+            height: mediaQuery.size.height * 0.13,
             width: mediaQuery.size.width * 0.8,
             child: SizedBox.expand(
               child: Row(
@@ -57,18 +59,31 @@ class NextTripCard extends StatelessWidget {
                 children: [
                   Container(
                     width: mediaQuery.size.width * 0.55,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Row(
-                        children: [
-                          Text(
-                            destination,
-                            overflow: TextOverflow.ellipsis,
-                            style: textStyle.headline5.copyWith(fontSize: 28),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Row(
+                            children: [
+                              Text(
+                                destination,
+                                overflow: TextOverflow.ellipsis,
+                                style:
+                                    textStyle.headline5.copyWith(fontSize: 28),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        if (tripType == 2)
+                          Text(
+                            "Carga trasera",
+                            overflow: TextOverflow.ellipsis,
+                            style: textStyle.headline5.copyWith(fontSize: 15),
+                          )
+                      ],
                     ),
                   ),
                   Text(

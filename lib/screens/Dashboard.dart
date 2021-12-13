@@ -39,6 +39,9 @@ class _DashboardState extends State<Dashboard> {
 
     if (!didSetup) {
       final testNetworkManager = Provider.of<NetworkProvider>(context);
+      setState(() {
+        isLoading = true;
+      });
 
       geoDataManager = testNetworkManager.geoData;
       testNetworkManager.populateTrips().then((value) {
@@ -146,7 +149,10 @@ class _DashboardState extends State<Dashboard> {
                                     ))
                                   : Text("Sin viaje")
                         ],
-                      )
+                      ),
+                      if (testNetworkManager.currentTrip.tipoViaje == 2)
+                        Text("Carga trasera",
+                            style: textStyle.headline6.copyWith(fontSize: 18)),
                     ],
                   ),
                 ),
@@ -455,22 +461,23 @@ class _DashboardState extends State<Dashboard> {
                       reorderButton,
                   if (testNetworkManager.trips.isNotEmpty)
                     SizedBox(height: mediaQuery.size.height * 0.05),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Proximos Viajes',
-                        style: textStyle.headline6,
-                      ),
-                      OutlineButton(
-                          onPressed: () {
-                            Navigator.of(context)
-                                .pushNamed(TripsScreen.routeName);
-                          },
-                          child: Text('Ver todos'))
-                    ],
-                  ),
-                  if (testNetworkManager.trips.isEmpty)
+                  if (!isLoading)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Proximos Viajes',
+                          style: textStyle.headline6,
+                        ),
+                        OutlineButton(
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pushNamed(TripsScreen.routeName);
+                            },
+                            child: Text('Ver todos'))
+                      ],
+                    ),
+                  if (testNetworkManager.trips.isEmpty && !isLoading)
                     Padding(
                       padding: const EdgeInsets.all(15.0),
                       child: Text("No tiene más viajes por hoy",
@@ -479,7 +486,7 @@ class _DashboardState extends State<Dashboard> {
                   isLoading
                       ? Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
+                          child: Container(),
                         )
                       : Container(
                           height: mediaQuery.size.height * 0.35,
@@ -502,6 +509,7 @@ class _DashboardState extends State<Dashboard> {
                                         time: DateFormat.jm()
                                             .format(trip.programmedArrivalTime),
                                         state: trip.stateEnum,
+                                        tripType: trip.tipoViaje,
                                       ),
                                     ),
                                 ]))

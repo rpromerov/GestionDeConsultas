@@ -22,6 +22,7 @@ class _ObraListScreenState extends State<ObraListScreen> {
   NetworkProvider network;
   var serverIndexForCheck = <int>[];
   var didSetUp = false;
+  var isSending = false;
 
   didChangeDependencies() {
     if (!didSetUp) {
@@ -64,7 +65,6 @@ class _ObraListScreenState extends State<ObraListScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    var isSending = false;
 
     return WillPopScope(
       onWillPop: () async {
