@@ -4,7 +4,6 @@ import 'package:Cosemar/model/equipment.dart';
 import 'package:Cosemar/model/trip.dart';
 import 'package:Cosemar/model/tripStatesEnum.dart';
 import 'package:Cosemar/providers/networkProvider.dart';
-import 'package:Cosemar/screens/CancelTripScreen.dart';
 import 'package:Cosemar/screens/LoginWidget.dart';
 import 'package:Cosemar/screens/ReceptionScreen.dart';
 import 'package:Cosemar/screens/receptionScreenGateway.dart';
@@ -103,9 +102,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       color: Colors.redAccent,
       text: 'Cancelar Viaje',
       icon: Icons.cancel,
-      function: () {
-        Navigator.of(context).pushNamed(CancelTripScreen.routeName);
-      },
+      function: () {},
     );
     final finishButton = DetailButton(
       color: Colors.green,
@@ -147,7 +144,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       case TripStates.onDepot:
         return [navButton, finishButton];
       case TripStates.onClient:
-        return [cancelButton];
+        return [];
 
       default:
         return [];
@@ -306,7 +303,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           return trip.deposito.name;
           break;
         default:
-          return obra.nombre;
+          return (obra == null) ? "" : obra.nombre;
           break;
       }
     }
@@ -375,6 +372,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     ? "Sin equipo"
                     : trip.equipment.name,
                 onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
                   setState(() {
                     final selectedEquipment = value as Equipment;
                     networkManager.currentTrip.equipmentID =

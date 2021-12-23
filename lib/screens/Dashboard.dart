@@ -425,6 +425,9 @@ class _DashboardState extends State<Dashboard> {
           IconButton(
               icon: Icon(Icons.replay_rounded),
               onPressed: () {
+                if (isLoading) {
+                  return;
+                }
                 Navigator.of(context).pushReplacementNamed(Login.routeName);
               })
         ],

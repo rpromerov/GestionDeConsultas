@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:Cosemar/providers/networkProvider.dart';
-import 'package:Cosemar/screens/CancelTripScreen.dart';
 import 'package:Cosemar/screens/Dashboard.dart';
 import 'package:Cosemar/screens/LandfillReceptionScreen.dart';
 import 'package:Cosemar/screens/NotificationScreen.dart';
@@ -52,7 +51,6 @@ class Main extends StatelessWidget {
           TripDetailScreen.routeName: (ctx) => TripDetailScreen(),
           ReceptionScreen.routeName: (ctx) => ReceptionScreen(),
           Login.routeName: (ctx) => Login(),
-          CancelTripScreen.routeName: (ctx) => CancelTripScreen(),
           ReceptionScreenGateway.routeName: (ctx) => ReceptionScreenGateway(),
           ClientReceptionScreenCamera.routeName: (ctx) =>
               ClientReceptionScreen(),

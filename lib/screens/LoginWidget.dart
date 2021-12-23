@@ -249,12 +249,12 @@ class _LoginState extends State<Login> {
                     child: Row(
                       children: [
                         Text(
-                          "12/12/21",
+                          "22/12/21",
                           style: TextStyle(color: Colors.grey),
                         ),
                         Spacer(),
                         Text(
-                          "v1.10.1",
+                          "v1.10.7",
                           style: TextStyle(color: Colors.grey),
                         ),
                       ],

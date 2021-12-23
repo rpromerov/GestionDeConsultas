@@ -79,7 +79,7 @@ class NetworkProvider with ChangeNotifier {
   }
 
   void backgroundUpdate() {
-    Timer.periodic(Duration(minutes: 1), (timer) async {
+    Timer.periodic(Duration(seconds: 60), (timer) async {
       if (timer.tick % 5 == 0) updateTrips();
       print("fired timer");
       checkReception();
@@ -254,6 +254,12 @@ class NetworkProvider with ChangeNotifier {
         targetLon = currentTrip.longitudDepot;
         break;
       default:
+        if (currentTrip == null) {
+          return false;
+        }
+        if (currentTrip.obras == null || currentTrip.obras.isEmpty) {
+          return false;
+        }
         targetLat = currentTrip.obras[0].latitud;
         targetLon = currentTrip.obras[0].longitud;
     }
@@ -268,7 +274,9 @@ class NetworkProvider with ChangeNotifier {
     var nextTrip = trips.firstWhere((e) {
       return e.tripID == tripID;
     });
-    if (nextTrip.avaibleEquipment.isNotEmpty && nextTrip.equipmentID != null) {
+    if (nextTrip.avaibleEquipment.isNotEmpty &&
+        nextTrip.equipmentID != null &&
+        nextTrip.tipoViaje != 2) {
       equipment = nextTrip.avaibleEquipment.firstWhere((test) {
         print(test.equipmentID == nextTrip.equipment.equipmentID);
         return test.equipmentID == nextTrip.equipmentID;
@@ -288,25 +296,6 @@ class NetworkProvider with ChangeNotifier {
           "Authorization": "Bearer $token"
         },
         body: encodedState);
-  }
-
-  Future<void> cancelTrip(String tripID) async {
-    final requestURL = "$serverIp/api/Viaje/$tripID";
-    final encodedState = jsonEncode({
-      'IdEstadoViaje': TripStates.canceled.asInt,
-      'llegadaBodega': encodeTime(null)
-    });
-    final response = await http.put(requestURL,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": "Bearer $token"
-        },
-        body: encodedState);
-    currentTrip.tripState = 99;
-    currentTrip = Trip();
-    currentObra = Obra();
-    notifyListeners();
   }
 
   Future<void> startTrip(String tripID) async {
@@ -397,8 +386,7 @@ class NetworkProvider with ChangeNotifier {
       String rut,
       String observaciones,
       String base64Firma,
-      String equipoRetiradoID,
-      String kgRetirados}) async {
+      String equipoRetiradoID}) async {
     final requestURL = "$serverIp/api/Recepcion/";
 
     final encodedState = jsonEncode({
@@ -409,7 +397,6 @@ class NetworkProvider with ChangeNotifier {
       'Firma': base64Firma,
       'idObra': currentTrip.obras[0].id,
       if (equipoRetiradoID.isNotEmpty) 'retiradoID': equipoRetiradoID,
-      if (currentTrip.tipoViaje == 2) 'kgRetirados': kgRetirados,
       'Tarros': {
         "t120": currentTrip.obras[0].tarros.cantidad120,
         "t240": currentTrip.obras[0].tarros.cantidad240,
@@ -565,7 +552,8 @@ class NetworkProvider with ChangeNotifier {
       return [];
     }
     var decodedResponse = jsonDecode(response.body);
-
+    print(decodedResponse);
+    print(response.statusCode);
     var decodedResponseList = List.from(decodedResponse);
     var decodedEquipos = <Equipment>[];
     for (var equipo in decodedResponseList) {
@@ -633,6 +621,9 @@ class NetworkProvider with ChangeNotifier {
       }
       final responseData = jsonDecode(response.body);
       for (var trip in responseData) {
+        if (trip['tipoViaje'] == 1 && trip['equipamiento'] == null) {
+          continue;
+        }
         var equipments = await fetchEquipments(trip['idViaje']);
         avaibleEquipments = equipments;
         var tripEquipmentIsNotAvaible = avaibleEquipments.indexWhere((test) {
@@ -658,14 +649,14 @@ class NetworkProvider with ChangeNotifier {
         if (codedObras.isNotEmpty) {
           for (var fullObra in codedObras) {
             var obra = fullObra['obra'];
-
+            print(trip['tipoViaje']);
             parsedObras.add(Obra(
                 equiposParaRetiro: trip['tipoViaje'] != 2
                     ? await fetchEquiposParaRetiro(obra['idObra'])
                     : [],
                 tarros: trip['tipoViaje'] == 2
                     ? await fetchTarros(fullObra['idServicio'])
-                    : [],
+                    : Tarros(),
                 comuna: obra['comuna'],
                 direccion: obra['direccion'],
                 latitud: obra['latitud'],
@@ -724,7 +715,9 @@ class NetworkProvider with ChangeNotifier {
               obras: parsedObras,
               baseSalida: baseSalida,
               depotId: trip['idBodega'],
-              equipmentID: trip['idEquipamiento'],
+              equipmentID: (trip['idEquipamiento'] == null)
+                  ? ""
+                  : trip['idEquipamiento'],
               latitudSalida: trip['baseSalida']['latitud'],
               longitudSalida: trip['baseSalida']['longuitud'],
               latitudVertedero: trip['disposicion']['latitud'],

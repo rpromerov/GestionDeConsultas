@@ -80,8 +80,7 @@ class _ClientReceptionScreenStateCamera
             nombre: _formInfo['name'],
             rut: RUTValidator.deFormat(_formInfo['rut']),
             observaciones: _formInfo['observacion'],
-            equipoRetiradoID: equipoARetirarID,
-            kgRetirados: _formInfo['kilos'])
+            equipoRetiradoID: equipoARetirarID)
         .whenComplete(() {
       showConfirmationDialog(ctx);
     });
@@ -243,9 +242,8 @@ class _ClientReceptionScreenStateCamera
     final dropdown = SizedBox(
         width: size.width * 0.9,
         child: SearchableDropdown.single(
-          items:
-              //networkManager.currentTrip.obras[0].equiposParaRetiro
-              [].map((equipo) {
+          items: networkManager.currentTrip.obras[0].equiposParaRetiro
+              .map((equipo) {
             return DropdownMenuItem(
               onTap: () {
                 return;
@@ -468,21 +466,6 @@ class _ClientReceptionScreenStateCamera
                           onSaved: (rut) => _formInfo['rut'] = rut,
                           onChanged: onChangedApplyFormat,
                         ),
-                        if (networkManager.currentTrip.tipoViaje != 2)
-                          TextFormField(
-                            initialValue: "",
-                            decoration: const InputDecoration(
-                                labelText: "Kilogramos retirados",
-                                hintText:
-                                    "Cuantos Kg se retiraron del cliente."),
-                            textInputAction: TextInputAction.done,
-                            keyboardType:
-                                TextInputType.numberWithOptions(decimal: true),
-                            validator: (kg) => kg.isNotEmpty
-                                ? null
-                                : "Debe ingresar los kilogramos retirados",
-                            onSaved: (kg) => _formInfo['kilos'] = kg,
-                          ),
                         TextFormField(
                             validator: (value) => null,
                             decoration: const InputDecoration(
